@@ -20,7 +20,7 @@ import (
 	"reflect"
 
 	"github.com/microcosm-cc/bluemonday"
-	"github.com/nymtech/nym/validator/nym/models"
+	"github.com/nymtech/node-status-api/models"
 )
 
 // GenericSanitizer sanitizes untrusted data of any type. It mutates its arguments in place.

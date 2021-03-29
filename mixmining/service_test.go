@@ -18,8 +18,8 @@ import (
 	"time"
 
 	"github.com/BorisBorshevsky/timemock"
-	"github.com/nymtech/nym/validator/nym/mixmining/mocks"
-	"github.com/nymtech/nym/validator/nym/models"
+	"github.com/nymtech/node-status-api/mixmining/mocks"
+	"github.com/nymtech/node-status-api/models"
 	. "github.com/onsi/ginkgo"
 	"github.com/stretchr/testify/assert"
 )

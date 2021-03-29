@@ -20,11 +20,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	"github.com/nymtech/nym/validator/nym/models"
+	"github.com/nymtech/node-status-api/models"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nymtech/nym/validator/nym/mixmining/fixtures"
-	"github.com/nymtech/nym/validator/nym/mixmining/mocks"
+	"github.com/nymtech/node-status-api/mixmining/fixtures"
+	"github.com/nymtech/node-status-api/mixmining/mocks"
 	. "github.com/onsi/ginkgo"
 	"github.com/stretchr/testify/assert"
 )

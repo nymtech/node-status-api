@@ -17,8 +17,8 @@ package mixmining
 import (
 	"time"
 
-	"github.com/nymtech/nym/validator/nym/mixmining/fixtures"
-	"github.com/nymtech/nym/validator/nym/models"
+	"github.com/nymtech/node-status-api/mixmining/fixtures"
+	"github.com/nymtech/node-status-api/models"
 	. "github.com/onsi/ginkgo"
 	"github.com/stretchr/testify/assert"
 )

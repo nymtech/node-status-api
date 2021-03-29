@@ -21,7 +21,7 @@ import (
 	"github.com/didip/tollbooth"
 	"github.com/didip/tollbooth_gin"
 	"github.com/gin-gonic/gin"
-	"github.com/nymtech/nym/validator/nym/models"
+	"github.com/nymtech/node-status-api/models"
 )
 
 const MaximumMixnodes = 1500

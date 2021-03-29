@@ -22,7 +22,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client/rpc"
 
 	"github.com/BorisBorshevsky/timemock"
-	"github.com/nymtech/nym/validator/nym/models"
+	"github.com/nymtech/node-status-api/models"
 )
 
 // so if you can mix ipv4 but not ipv6, your reputation will go down but not as fast as if you didn't mix at all

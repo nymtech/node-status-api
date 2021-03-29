@@ -26,7 +26,7 @@ import (
 
 	"gorm.io/gorm/clause"
 
-	"github.com/nymtech/nym/validator/nym/models"
+	"github.com/nymtech/node-status-api/models"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
