@@ -1,10 +1,8 @@
-# Nym Directory Server
+# Node Status API
 
-A PKI, presence and mixmining monitoring server.
+A monitoring API which stores node statuses for payment purposes.
 
-Nym nodes and clients use it to find each other, and bootstrap the network into existence. 
-
-Mixmining reports are stored in a SQLite database at `~/.nym/mixmining.db`
+Reports are stored in a SQLite database at `~/.nym/mixmining.db`
 
 ## Dependencies
 
