@@ -15,12 +15,9 @@
 package mixmining
 
 import (
-	"net/http"
 	"time"
 
 	"github.com/BorisBorshevsky/timemock"
-	"github.com/cosmos/cosmos-sdk/client/context"
-	"github.com/nymtech/nym/validator/nym/mixmining/fixtures"
 	"github.com/nymtech/nym/validator/nym/mixmining/mocks"
 	"github.com/nymtech/nym/validator/nym/models"
 	. "github.com/onsi/ginkgo"
@@ -176,7 +173,7 @@ var _ = Describe("mixmining.Service", func() {
 		mockDb.On("Topology").Return(models.Topology{})
 		mockDb.On("ActiveTopology", ReputationThreshold).Return(models.Topology{}).Once()
 		mockDb.On("RemovedTopology").Return(models.Topology{})
-		serv = *NewService(&mockDb, context.NewCLIContext(), true)
+		serv = *NewService(&mockDb, true)
 	})
 
 	Describe("Adding a mix status and creating a new summary report for a node", func() {
@@ -402,139 +399,6 @@ var _ = Describe("mixmining.Service", func() {
 
 				report := serv.GetStatusReport("superkey")
 				assert.Equal(GinkgoT(), perfect, report)
-			})
-		})
-	})
-})
-
-var _ = Describe("mixmining.registration.Service", func() {
-	var mockDb *mocks.IDb
-	var serv *Service
-
-	BeforeEach(func() {
-		mockDb = &mocks.IDb{}
-		mockDb.On("Topology").Return(models.Topology{})
-		mockDb.On("ActiveTopology", ReputationThreshold).Return(models.Topology{})
-		mockDb.On("RemovedTopology").Return(models.Topology{})
-		serv = NewService(mockDb, context.NewCLIContext(), true)
-	})
-
-	Describe("Adding mix registration info", func() {
-		It("creates new registered mix with empty reputation and zero timestamp", func() {
-			info := fixtures.GoodMixRegistrationInfo()
-			registeredMix := models.RegisteredMix{
-				MixRegistrationInfo: info,
-			}
-
-			mockDb.On("RegisterMix", registeredMix)
-			serv.RegisterMix(info)
-			mockDb.AssertCalled(GinkgoT(), "RegisterMix", registeredMix)
-		})
-	})
-
-	Describe("Adding gateway registration info", func() {
-		It("creates new registered gateway with empty reputation and zero timestamp", func() {
-			info := fixtures.GoodGatewayRegistrationInfo()
-			registeredGateway := models.RegisteredGateway{
-				GatewayRegistrationInfo: info,
-			}
-
-			mockDb.On("RegisterGateway", registeredGateway)
-			serv.RegisterGateway(info)
-			mockDb.AssertCalled(GinkgoT(), "RegisterGateway", registeredGateway)
-		})
-	})
-
-	Describe("Unregistering node", func() {
-		Context("When caller ip matches", func() {
-			It("Performs unregistration for node announcing ip address", func() {
-				nodeID := "foomp"
-
-				mockDb.On("GetNodeMixHost", nodeID).Return("127.0.0.1:1234")
-				mockDb.On("UnregisterNode", nodeID).Return(true)
-
-				_, err := serv.UnregisterNode(nodeID, "127.0.0.1")
-				assert.Nil(GinkgoT(), err)
-				mockDb.AssertCalled(GinkgoT(), "UnregisterNode", nodeID)
-			})
-
-			It("Performs unregistration for node announcing hostname", func() {
-				nodeID := "foomp"
-
-				mockDb.On("GetNodeMixHost", nodeID).Return("nymtech.net:1234")
-				mockDb.On("UnregisterNode", nodeID).Return(true)
-
-				_, err := serv.UnregisterNode(nodeID, "185.19.28.43")
-				assert.Nil(GinkgoT(), err)
-				mockDb.AssertCalled(GinkgoT(), "UnregisterNode", nodeID)
-			})
-		})
-
-		Context("When caller ip is empty", func() {
-			It("returns a bad status", func() {
-				nodeID := "foomp"
-
-				status, err := serv.UnregisterNode(nodeID, "")
-				assert.NotNil(GinkgoT(), status, http.StatusBadRequest)
-				assert.NotNil(GinkgoT(), err)
-			})
-		})
-
-		Context("When node with specified id doesn't exist", func() {
-			It("returns a not found status", func() {
-				nodeID := "foomp"
-
-				mockDb.On("GetNodeMixHost", nodeID).Return("")
-
-				status, err := serv.UnregisterNode(nodeID, "1.1.1.1")
-				assert.NotNil(GinkgoT(), status, http.StatusBadRequest)
-				assert.NotNil(GinkgoT(), err)
-			})
-		})
-
-		Context("When caller ip doesn't match", func() {
-			It("Doesn't perform unregistration for node announcing ip address", func() {
-				nodeID := "foomp"
-
-				mockDb.On("GetNodeMixHost", nodeID).Return("127.0.0.1:1234")
-
-				status, err := serv.UnregisterNode(nodeID, "1.1.1.1")
-				assert.NotNil(GinkgoT(), status, http.StatusForbidden)
-				assert.NotNil(GinkgoT(), err)
-			})
-
-			It("Doesn't perform unregistration for node announcing hostname", func() {
-				nodeID := "foomp"
-
-				mockDb.On("GetNodeMixHost", nodeID).Return("nymtech.net:1234")
-
-				status, err := serv.UnregisterNode(nodeID, "1.1.1.1")
-				assert.NotNil(GinkgoT(), status, http.StatusForbidden)
-				assert.NotNil(GinkgoT(), err)
-			})
-		})
-	})
-
-	Describe("Setting reputation of a node", func() {
-		Context("With given identity when it exists", func() {
-			It("Calls internal database with correct arguments", func() {
-				nodeID := "foomp"
-				newRep := int64(42)
-				mockDb.On("SetReputation", nodeID, newRep).Return(true)
-
-				assert.True(GinkgoT(), serv.SetReputation(nodeID, newRep))
-				mockDb.AssertCalled(GinkgoT(), "SetReputation", nodeID, newRep)
-			})
-		})
-
-		Context("With given identity when it doesn't exists", func() {
-			It("Calls internal database with correct arguments", func() {
-				nodeID := "foomp"
-				newRep := int64(42)
-				mockDb.On("SetReputation", nodeID, newRep).Return(false)
-
-				assert.False(GinkgoT(), serv.SetReputation(nodeID, newRep))
-				mockDb.AssertCalled(GinkgoT(), "SetReputation", nodeID, newRep)
 			})
 		})
 	})
