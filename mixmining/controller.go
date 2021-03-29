@@ -16,14 +16,15 @@ package mixmining
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/nymtech/nym/validator/nym/directory/models"
 	"net/http"
 	"os"
 	"strconv"
 	"sync"
+
 	"github.com/didip/tollbooth"
 	"github.com/didip/tollbooth_gin"
+	"github.com/gin-gonic/gin"
+	"github.com/nymtech/nym/validator/nym/models"
 )
 
 const MaximumMixnodes = 1500
@@ -79,10 +80,10 @@ func (controller *controller) RegisterRoutes(router *gin.Engine) {
 	lmt := tollbooth_gin.LimitHandler(tollbooth.NewLimiter(1, nil))
 
 	// allows 2 requests per minute (meaning in a 1min you can register and unregister)
-	registrationLmt := tollbooth_gin.LimitHandler(tollbooth.NewLimiter(2.0 / 60.0, nil).SetBurst(2))
+	registrationLmt := tollbooth_gin.LimitHandler(tollbooth.NewLimiter(2.0/60.0, nil).SetBurst(2))
 
 	// allows 1 topology request per 10s
-	topologyLmt := tollbooth_gin.LimitHandler(tollbooth.NewLimiter(1.0 / 10.0, nil).SetBurst(3))
+	topologyLmt := tollbooth_gin.LimitHandler(tollbooth.NewLimiter(1.0/10.0, nil).SetBurst(3))
 
 	router.POST("/api/mixmining", lmt, controller.CreateMixStatus)
 	router.POST("/api/mixmining/batch", lmt, controller.BatchCreateMixStatus)
@@ -93,7 +94,7 @@ func (controller *controller) RegisterRoutes(router *gin.Engine) {
 	router.POST("/api/mixmining/register/mix", registrationLmt, controller.RegisterMixPresence)
 	router.POST("/api/mixmining/register/gateway", registrationLmt, controller.RegisterGatewayPresence)
 	router.DELETE("/api/mixmining/register/:id", registrationLmt, controller.UnregisterPresence)
-	router.GET("/api/mixmining/topology", topologyLmt,  controller.GetTopology)
+	router.GET("/api/mixmining/topology", topologyLmt, controller.GetTopology)
 	router.GET("/api/mixmining/topology/active", topologyLmt, controller.GetActiveTopology)
 	router.PATCH("/api/mixmining/reputation/:id", lmt, controller.ChangeReputation)
 

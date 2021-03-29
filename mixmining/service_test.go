@@ -15,15 +15,16 @@
 package mixmining
 
 import (
-	"github.com/BorisBorshevsky/timemock"
-	"github.com/cosmos/cosmos-sdk/client/context"
-	"github.com/nymtech/nym/validator/nym/directory/mixmining/fixtures"
-	"github.com/nymtech/nym/validator/nym/directory/mixmining/mocks"
-	"github.com/nymtech/nym/validator/nym/directory/models"
-	. "github.com/onsi/ginkgo"
-	"github.com/stretchr/testify/assert"
 	"net/http"
 	"time"
+
+	"github.com/BorisBorshevsky/timemock"
+	"github.com/cosmos/cosmos-sdk/client/context"
+	"github.com/nymtech/nym/validator/nym/mixmining/fixtures"
+	"github.com/nymtech/nym/validator/nym/mixmining/mocks"
+	"github.com/nymtech/nym/validator/nym/models"
+	. "github.com/onsi/ginkgo"
+	"github.com/stretchr/testify/assert"
 )
 
 func now() int64 {
@@ -445,8 +446,8 @@ var _ = Describe("mixmining.registration.Service", func() {
 	})
 
 	Describe("Unregistering node", func() {
-		Context("When caller ip matches", func () {
-			It("Performs unregistration for node announcing ip address", func () {
+		Context("When caller ip matches", func() {
+			It("Performs unregistration for node announcing ip address", func() {
 				nodeID := "foomp"
 
 				mockDb.On("GetNodeMixHost", nodeID).Return("127.0.0.1:1234")
@@ -457,7 +458,7 @@ var _ = Describe("mixmining.registration.Service", func() {
 				mockDb.AssertCalled(GinkgoT(), "UnregisterNode", nodeID)
 			})
 
-			It("Performs unregistration for node announcing hostname", func () {
+			It("Performs unregistration for node announcing hostname", func() {
 				nodeID := "foomp"
 
 				mockDb.On("GetNodeMixHost", nodeID).Return("nymtech.net:1234")
@@ -491,8 +492,8 @@ var _ = Describe("mixmining.registration.Service", func() {
 			})
 		})
 
-		Context("When caller ip doesn't match", func () {
-			It("Doesn't perform unregistration for node announcing ip address", func () {
+		Context("When caller ip doesn't match", func() {
+			It("Doesn't perform unregistration for node announcing ip address", func() {
 				nodeID := "foomp"
 
 				mockDb.On("GetNodeMixHost", nodeID).Return("127.0.0.1:1234")
@@ -502,7 +503,7 @@ var _ = Describe("mixmining.registration.Service", func() {
 				assert.NotNil(GinkgoT(), err)
 			})
 
-			It("Doesn't perform unregistration for node announcing hostname", func () {
+			It("Doesn't perform unregistration for node announcing hostname", func() {
 				nodeID := "foomp"
 
 				mockDb.On("GetNodeMixHost", nodeID).Return("nymtech.net:1234")

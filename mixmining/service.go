@@ -17,15 +17,16 @@ package mixmining
 import (
 	"errors"
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/client/context"
-	"github.com/cosmos/cosmos-sdk/client/rpc"
 	"net"
 	"net/http"
 	"sync/atomic"
 	"time"
 
+	"github.com/cosmos/cosmos-sdk/client/context"
+	"github.com/cosmos/cosmos-sdk/client/rpc"
+
 	"github.com/BorisBorshevsky/timemock"
-	"github.com/nymtech/nym/validator/nym/directory/models"
+	"github.com/nymtech/nym/validator/nym/models"
 )
 
 // so if you can mix ipv4 but not ipv6, your reputation will go down but not as fast as if you didn't mix at all
@@ -141,7 +142,7 @@ func oldStatusesPurger(service *Service) {
 
 	for {
 		now := timemock.Now()
-		lastWeek := now.Add(- (time.Hour * 24 * 7)).UnixNano()
+		lastWeek := now.Add(-(time.Hour * 24 * 7)).UnixNano()
 		service.db.RemoveOldStatuses(lastWeek)
 		<-ticker.C
 	}

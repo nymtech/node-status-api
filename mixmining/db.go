@@ -16,7 +16,6 @@ package mixmining
 
 import (
 	"fmt"
-	"gorm.io/gorm/clause"
 	"io/ioutil"
 	"log"
 	"net"
@@ -25,7 +24,9 @@ import (
 	"path"
 	"strings"
 
-	"github.com/nymtech/nym/validator/nym/directory/models"
+	"gorm.io/gorm/clause"
+
+	"github.com/nymtech/nym/validator/nym/models"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )

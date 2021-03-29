@@ -22,11 +22,11 @@ import (
 	"net/http/httptest"
 	"strconv"
 
-	"github.com/nymtech/nym/validator/nym/directory/models"
+	"github.com/nymtech/nym/validator/nym/models"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nymtech/nym/validator/nym/directory/mixmining/fixtures"
-	"github.com/nymtech/nym/validator/nym/directory/mixmining/mocks"
+	"github.com/nymtech/nym/validator/nym/mixmining/fixtures"
+	"github.com/nymtech/nym/validator/nym/mixmining/mocks"
 	. "github.com/onsi/ginkgo"
 	"github.com/stretchr/testify/assert"
 )
@@ -145,7 +145,7 @@ var _ = Describe("Controller", func() {
 			Context("that has 'false' set for 'Up'", func() {
 				It("should save the mix status", func() {
 					boolfalse := false
-					router, mockService,_, _, mockBatchSanitizer := SetupRouter()
+					router, mockService, _, _, mockBatchSanitizer := SetupRouter()
 					singleStatusBatch := models.BatchMixStatus{Status: []models.MixStatus{fixtures.GoodMixStatus()}}
 					singleStatusBatch.Status[0].Up = &boolfalse
 
@@ -165,7 +165,7 @@ var _ = Describe("Controller", func() {
 
 			Context("containing xss", func() {
 				It("should strip the xss attack, save the individual mix status, and update the status report for the given node", func() {
-					router, mockService,_, _, mockBatchSanitizer := SetupRouter()
+					router, mockService, _, _, mockBatchSanitizer := SetupRouter()
 					singleXSSStatusBatch := models.BatchMixStatus{Status: []models.MixStatus{fixtures.XSSMixStatus()}}
 					singleStatusBatch := models.BatchMixStatus{Status: []models.MixStatus{fixtures.GoodMixStatus()}}
 					savedStatus := []models.PersistedMixStatus{{MixStatus: fixtures.GoodMixStatus(), Timestamp: 1234}}
@@ -189,7 +189,7 @@ var _ = Describe("Controller", func() {
 		Context("Containing multiple status data", func() {
 			Context("containing xss", func() {
 				It("should strip the xss attack, save the individual mix status, and update the status report for the given node", func() {
-					router, mockService,_, _, mockBatchSanitizer := SetupRouter()
+					router, mockService, _, _, mockBatchSanitizer := SetupRouter()
 
 					mockBatchSanitizer.On("Sanitize", fixtures.XSSBatchMixStatus()).Return(fixtures.GoodBatchMixStatus())
 					mockService.On("BatchCreateMixStatus", fixtures.GoodBatchMixStatus()).Return(fixtures.GoodPersistedBatchMixStatus())
@@ -426,10 +426,10 @@ func SetupRouter() (*gin.Engine, *mocks.IService, *mocks.Sanitizer, *mocks.Gener
 	mockService.On("StartupPurge")
 
 	cfg := Config{
-		BatchSanitizer: mockBatchSanitizer,
+		BatchSanitizer:   mockBatchSanitizer,
 		GenericSanitizer: mockGenericSanitizer,
-		Sanitizer:      mockSanitizer,
-		Service:        mockService,
+		Sanitizer:        mockSanitizer,
+		Service:          mockService,
 	}
 	gin.SetMode(gin.TestMode)
 	router := gin.Default()

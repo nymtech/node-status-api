@@ -16,12 +16,12 @@ package mixmining
 
 import (
 	"fmt"
-	"github.com/microcosm-cc/bluemonday"
-	"github.com/nymtech/nym/validator/nym/directory/models"
 	"os"
 	"reflect"
-)
 
+	"github.com/microcosm-cc/bluemonday"
+	"github.com/nymtech/nym/validator/nym/models"
+)
 
 // GenericSanitizer sanitizes untrusted data of any type. It mutates its arguments in place.
 type GenericSanitizer interface {

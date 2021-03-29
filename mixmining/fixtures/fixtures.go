@@ -14,7 +14,7 @@
 
 package fixtures
 
-import "github.com/nymtech/nym/validator/nym/directory/models"
+import "github.com/nymtech/nym/validator/nym/models"
 
 // MixStatusesList A list of mix statuses
 func MixStatusesList() []models.PersistedMixStatus {
@@ -146,7 +146,6 @@ func MixStatusReport() models.MixStatusReport {
 		LastDayIPV6:      100,
 	}
 }
-
 
 func GoodMixRegistrationInfo() models.MixRegistrationInfo {
 	return models.MixRegistrationInfo{

@@ -15,11 +15,12 @@
 package mixmining
 
 import (
-	"github.com/nymtech/nym/validator/nym/directory/mixmining/fixtures"
-	"github.com/nymtech/nym/validator/nym/directory/models"
+	"time"
+
+	"github.com/nymtech/nym/validator/nym/mixmining/fixtures"
+	"github.com/nymtech/nym/validator/nym/models"
 	. "github.com/onsi/ginkgo"
 	"github.com/stretchr/testify/assert"
-	"time"
 )
 
 var _ = Describe("The mixmining db", func() {
@@ -450,7 +451,7 @@ var _ = Describe("The mixmining db", func() {
 		})
 	})
 
-	Describe("Getting active topology", func () {
+	Describe("Getting active topology", func() {
 		Context("With registered nodes but below reputation threshold", func() {
 			It("Returns empty slices", func() {
 				db := NewDb(true)
@@ -466,8 +467,8 @@ var _ = Describe("The mixmining db", func() {
 				db.RegisterMix(mix1)
 				db.RegisterGateway(gate1)
 
-				db.SetReputation(mix1.IdentityKey, ReputationThreshold - 1)
-				db.SetReputation(gate1.IdentityKey, ReputationThreshold - 1)
+				db.SetReputation(mix1.IdentityKey, ReputationThreshold-1)
+				db.SetReputation(gate1.IdentityKey, ReputationThreshold-1)
 
 				topology := db.ActiveTopology(ReputationThreshold)
 				assert.Len(GinkgoT(), topology.MixNodes, 0)
@@ -498,8 +499,8 @@ var _ = Describe("The mixmining db", func() {
 				db.RegisterGateway(gate1)
 				db.RegisterGateway(gate2)
 
-				db.SetReputation(mix1.IdentityKey, ReputationThreshold - 1)
-				db.SetReputation(gate1.IdentityKey, ReputationThreshold - 1)
+				db.SetReputation(mix1.IdentityKey, ReputationThreshold-1)
+				db.SetReputation(gate1.IdentityKey, ReputationThreshold-1)
 				db.SetReputation(mix2.IdentityKey, ReputationThreshold)
 				db.SetReputation(gate2.IdentityKey, ReputationThreshold)
 

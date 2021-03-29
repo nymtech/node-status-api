@@ -16,7 +16,7 @@ package mixmining
 
 import (
 	"github.com/microcosm-cc/bluemonday"
-	"github.com/nymtech/nym/validator/nym/directory/models"
+	"github.com/nymtech/nym/validator/nym/models"
 	. "github.com/onsi/ginkgo"
 	"github.com/stretchr/testify/assert"
 )
