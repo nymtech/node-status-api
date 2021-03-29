@@ -1,4 +1,4 @@
-module github.com/nymtech/nym/validator/nym
+module github.com/nymtech/node-status-api
 
 go 1.15
 
