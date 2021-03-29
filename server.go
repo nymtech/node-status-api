@@ -17,8 +17,6 @@ package server
 import (
 	"net/http"
 
-	"github.com/cosmos/cosmos-sdk/client/context"
-
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/microcosm-cc/bluemonday"
@@ -30,7 +28,7 @@ import (
 )
 
 func main() {
-	directory := New(ctx)
+	directory := New()
 	go directory.Run(":8081")
 }
 
@@ -41,7 +39,7 @@ func main() {
 // @termsOfService http://swagger.io/terms/
 // @license.name Apache 2.0
 // @license.url https://github.com/nymtech/nym-validator/license
-func New(cliCtx context.CLIContext) *gin.Engine {
+func New() *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 
 	// Set the router as the default one shipped with Gin
@@ -67,7 +65,7 @@ func New(cliCtx context.CLIContext) *gin.Engine {
 	policy := bluemonday.UGCPolicy()
 
 	// Measurements: wire up dependency injection
-	measurementsCfg := injectMeasurements(policy, cliCtx)
+	measurementsCfg := injectMeasurements(policy)
 
 	// Register all HTTP controller routes
 	healthcheck.New().RegisterRoutes(router)
@@ -76,12 +74,12 @@ func New(cliCtx context.CLIContext) *gin.Engine {
 	return router
 }
 
-func injectMeasurements(policy *bluemonday.Policy, cliCtx context.CLIContext) mixmining.Config {
+func injectMeasurements(policy *bluemonday.Policy) mixmining.Config {
 	sanitizer := mixmining.NewSanitizer(policy)
 	batchSanitizer := mixmining.NewBatchSanitizer(policy)
 	genericSanitizer := mixmining.NewGenericSanitizer(policy)
 	db := mixmining.NewDb(false)
-	mixminingService := *mixmining.NewService(db, cliCtx, false)
+	mixminingService := *mixmining.NewService(db, false)
 
 	return mixmining.Config{
 		Service:          &mixminingService,
