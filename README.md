@@ -10,7 +10,8 @@ Reports are stored in a SQLite database at `~/.nym/mixmining.db`
 
 ## Building and running
 
-The directory is integrated directly into the validator node and will start when the node starts.
+
+`go build` will build the binary. 
 
 ## Usage
 
@@ -24,9 +25,5 @@ so you can poke at the server to see what it does.
 
 `go test ./...` will run the test suite.
 
-From the top-level `nym-validator` directory, `swag init -g directory/server.go --output directory/docs/` rebuilds the Swagger docs.
-
-If you update any of the HTML assets,
-`go-assets-builder server/html/index.html -o server/html/index.go` will
-put it in the correct place to be built into the binary. 
+From the top-level `node-status-api` directory, `swag init -g main.go --output docs/` rebuilds the Swagger docs.
 
