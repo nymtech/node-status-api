@@ -15,7 +15,6 @@
 package mixmining
 
 import (
-	"fmt"
 	"sync/atomic"
 	"time"
 
@@ -41,9 +40,8 @@ const TopologyNotRefreshing = 0
 
 // Service struct
 type Service struct {
-	db         IDb
-	cliCtx     context.CLIContext
-	validators *rpc.ResultValidatorsOutput
+	db     IDb
+	cliCtx context.CLIContext
 
 	topology                 models.Topology
 	topologyRefreshed        time.Time
@@ -77,10 +75,8 @@ type IService interface {
 
 // NewService constructor
 func NewService(db IDb, isTest bool) *Service {
-	emptyValidators := emptyValidators()
 	service := &Service{
 		db:                       db,
-		validators:               &emptyValidators,
 		topology:                 db.Topology(),
 		topologyRefreshed:        timemock.Now(),
 		activeTopology:           db.ActiveTopology(ReputationThreshold),
@@ -90,8 +86,6 @@ func NewService(db IDb, isTest bool) *Service {
 	}
 
 	if !isTest {
-		// start validator updater in background (every 30s)
-		go updateValidators(service)
 		// same with 'last day' report updater (every 10min)
 		go lastDayReportsUpdater(service)
 		// and old statuses remover (every 1h)
@@ -101,27 +95,13 @@ func NewService(db IDb, isTest bool) *Service {
 	return service
 }
 
-func updateValidators(service *Service) {
-	ticker := time.NewTicker(time.Second * 30)
-
-	for {
-		validators, err := rpc.GetValidators(service.cliCtx, nil, 1, 100)
-		if err != nil {
-			fmt.Printf("failed to grab validators - %v\n", err)
-		} else {
-			*service.validators = validators
-		}
-		<-ticker.C
-	}
-}
-
 func lastDayReportsUpdater(service *Service) {
 	ticker := time.NewTicker(time.Minute * 10)
 
 	for {
 		<-ticker.C
-		batchReport := service.updateLastDayReports()
-		service.removeBrokenNodes(&batchReport)
+		// batchReport := service.updateLastDayReports()
+		// service.removeBrokenNodes(&batchReport)
 	}
 
 }
@@ -137,32 +117,24 @@ func oldStatusesPurger(service *Service) {
 	}
 }
 
-func (service *Service) updateLastDayReports() models.BatchMixStatusReport {
-	topology := service.GetTopology()
+// func (service *Service) updateLastDayReports() models.BatchMixStatusReport {
+// 	dayAgo := timemock.Now().Add(time.Duration(-time.Hour * 24)).UnixNano()
+// 	batchReport := service.db.BatchLoadReports(reportKeys)
+// 	for idx := range batchReport.Report {
+// 		report := &batchReport.Report[idx]
+// 		lastDayUptime := service.CalculateUptimeSince(report.PubKey, "4", dayAgo, LastDayReports)
+// 		if lastDayUptime == -1 {
+// 			// there were no reports to calculate uptime with
+// 			continue
+// 		}
 
-	// right there are no reports for gateways so ignore them.
-	reportKeys := make([]string, 0, len(topology.MixNodes))
-	for _, mix := range topology.MixNodes {
-		reportKeys = append(reportKeys, mix.IdentityKey)
-	}
+// 		report.LastDayIPV4 = lastDayUptime
+// 		report.LastDayIPV6 = service.CalculateUptimeSince(report.PubKey, "6", dayAgo, LastDayReports)
+// 	}
 
-	dayAgo := timemock.Now().Add(time.Duration(-time.Hour * 24)).UnixNano()
-	batchReport := service.db.BatchLoadReports(reportKeys)
-	for idx := range batchReport.Report {
-		report := &batchReport.Report[idx]
-		lastDayUptime := service.CalculateUptimeSince(report.PubKey, "4", dayAgo, LastDayReports)
-		if lastDayUptime == -1 {
-			// there were no reports to calculate uptime with
-			continue
-		}
-
-		report.LastDayIPV4 = lastDayUptime
-		report.LastDayIPV6 = service.CalculateUptimeSince(report.PubKey, "6", dayAgo, LastDayReports)
-	}
-
-	service.db.SaveBatchMixStatusReport(batchReport)
-	return batchReport
-}
+// 	service.db.SaveBatchMixStatusReport(batchReport)
+// 	return batchReport
+// }
 
 func (service *Service) removeBrokenNodes(batchReport *models.BatchMixStatusReport) {
 	// figure out which nodes should get removed
