@@ -53,7 +53,7 @@ func New() *gin.Engine {
 	// Measurements: wire up dependency injection
 	measurementsCfg := injectMeasurements(policy)
 
-	// Register all HTTP controller routes
+	// Register HTTP controller routes
 	mixmining.New(measurementsCfg).RegisterRoutes(router)
 
 	return router
