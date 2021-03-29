@@ -34,7 +34,7 @@ info:
     url: https://github.com/nymtech/node-status-api/license
   termsOfService: http://swagger.io/terms/
   title: Nym Node Status API
-  version: 0.10.0-dev
+  version: 0.10.0
 paths:
   /api/mixmining:
     post:
