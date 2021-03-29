@@ -32,13 +32,13 @@ func main() {
 	go directory.Run(":8081")
 }
 
-// New returns a new REST API server
-// @title Nym Directory API
-// @version 0.9.0-dev
-// @description A directory API allowing Nym nodes and clients to connect to each other.
+// New returns a new node status REST API server
+// @title Nym Node Status API
+// @version 0.10.0-dev
+// @description A node status API that holds uptime information for Nym nodes.
 // @termsOfService http://swagger.io/terms/
 // @license.name Apache 2.0
-// @license.url https://github.com/nymtech/nym-validator/license
+// @license.url https://github.com/nymtech/node-status-api/license
 func New() *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 
