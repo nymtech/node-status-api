@@ -14,8 +14,6 @@ require (
 	github.com/go-openapi/swag v0.19.9 // indirect
 	github.com/golang/mock v1.4.3 // indirect
 	github.com/google/gofuzz v1.1.0 // indirect
-	github.com/google/uuid v1.0.0
-	github.com/gorilla/mux v1.7.4
 	github.com/jessevdk/go-assets v0.0.0-20160921144138-4f4301a06e15
 	github.com/jinzhu/gorm v1.9.16
 	github.com/kr/text v0.2.0 // indirect
@@ -26,15 +24,11 @@ require (
 	github.com/onsi/gomega v1.10.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/spf13/afero v1.2.2 // indirect
-	github.com/spf13/cobra v1.0.0
-	github.com/spf13/viper v1.7.0
+	github.com/spf13/viper v1.7.0 // indirect
 	github.com/stretchr/testify v1.6.1
 	github.com/swaggo/files v0.0.0-20190704085106-630677cd5c14
 	github.com/swaggo/gin-swagger v1.2.0
 	github.com/swaggo/swag v1.6.5
-	github.com/tendermint/go-amino v0.15.1
-	github.com/tendermint/tendermint v0.33.7
-	github.com/tendermint/tm-db v0.5.1
 	golang.org/x/net v0.0.0-20200520182314-0ba52f642ac2 // indirect
 	golang.org/x/tools v0.0.0-20200426102838-f3a5411a4c3b // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
