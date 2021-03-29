@@ -15,18 +15,24 @@
 package server
 
 import (
-	"github.com/cosmos/cosmos-sdk/client/context"
 	"net/http"
+
+	"github.com/cosmos/cosmos-sdk/client/context"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/microcosm-cc/bluemonday"
-	"github.com/nymtech/nym/validator/nym/directory/healthcheck"
-	"github.com/nymtech/nym/validator/nym/directory/mixmining"
-	"github.com/nymtech/nym/validator/nym/directory/server/html"
+	"github.com/nymtech/nym/validator/nym/healthcheck"
+	"github.com/nymtech/nym/validator/nym/mixmining"
+	"github.com/nymtech/nym/validator/nym/server/html"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
+
+func main() {
+	directory := New(ctx)
+	go directory.Run(":8081")
+}
 
 // New returns a new REST API server
 // @title Nym Directory API
@@ -37,7 +43,7 @@ import (
 // @license.url https://github.com/nymtech/nym-validator/license
 func New(cliCtx context.CLIContext) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
-	
+
 	// Set the router as the default one shipped with Gin
 	router := gin.Default()
 
@@ -78,9 +84,9 @@ func injectMeasurements(policy *bluemonday.Policy, cliCtx context.CLIContext) mi
 	mixminingService := *mixmining.NewService(db, cliCtx, false)
 
 	return mixmining.Config{
-		Service:   &mixminingService,
-		Sanitizer: sanitizer,
+		Service:          &mixminingService,
+		Sanitizer:        sanitizer,
 		GenericSanitizer: genericSanitizer,
-		BatchSanitizer: batchSanitizer,
+		BatchSanitizer:   batchSanitizer,
 	}
 }
