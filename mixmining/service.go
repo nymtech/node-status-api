@@ -100,8 +100,8 @@ func lastDayReportsUpdater(service *Service) {
 
 	for {
 		<-ticker.C
-		// batchReport := service.updateLastDayReports()
-		// service.removeBrokenNodes(&batchReport)
+		batchReport := service.updateLastDayReports()
+		service.removeBrokenNodes(&batchReport)
 	}
 
 }
@@ -117,24 +117,31 @@ func oldStatusesPurger(service *Service) {
 	}
 }
 
-// func (service *Service) updateLastDayReports() models.BatchMixStatusReport {
-// 	dayAgo := timemock.Now().Add(time.Duration(-time.Hour * 24)).UnixNano()
-// 	batchReport := service.db.BatchLoadReports(reportKeys)
-// 	for idx := range batchReport.Report {
-// 		report := &batchReport.Report[idx]
-// 		lastDayUptime := service.CalculateUptimeSince(report.PubKey, "4", dayAgo, LastDayReports)
-// 		if lastDayUptime == -1 {
-// 			// there were no reports to calculate uptime with
-// 			continue
-// 		}
+func (service *Service) updateLastDayReports() models.BatchMixStatusReport {
+	// set :reportKeys to a list of the public keys of nodes that have been seen in the past 24 hours (retrieve from the database)
+	// :allKeys = SELECT pub_key FROM mix_status_reports WHERE timestamp > now - 24 hours // gives a list of all mix status reports
+	// loop through :allKeys to de-duplicate the keys or use UNIQUE
+	// remove the limit on CalculateUptimeSince().
 
-// 		report.LastDayIPV4 = lastDayUptime
-// 		report.LastDayIPV6 = service.CalculateUptimeSince(report.PubKey, "6", dayAgo, LastDayReports)
-// 	}
+	// JS: uncomment below!
+	// dayAgo := timemock.Now().Add(time.Duration(-time.Hour * 24)).UnixNano()
+	// batchReport := service.db.BatchLoadReports(reportKeys)
+	// for idx := range batchReport.Report {
+	// 	report := &batchReport.Report[idx]
+	// 	lastDayUptime := service.CalculateUptimeSince(report.PubKey, "4", dayAgo, LastDayReports)
+	// 	if lastDayUptime == -1 {
+	// 		// there were no reports to calculate uptime with
+	// 		continue
+	// 	}
 
-// 	service.db.SaveBatchMixStatusReport(batchReport)
-// 	return batchReport
-// }
+	// 	report.LastDayIPV4 = lastDayUptime
+	// 	report.LastDayIPV6 = service.CalculateUptimeSince(report.PubKey, "6", dayAgo, LastDayReports)
+	// }
+
+	// service.db.SaveBatchMixStatusReport(batchReport)
+	// return batchReport
+	return models.BatchMixStatusReport{} // placeholder to compile
+}
 
 func (service *Service) removeBrokenNodes(batchReport *models.BatchMixStatusReport) {
 	// figure out which nodes should get removed
