@@ -15,7 +15,6 @@
 package mixmining
 
 import (
-	"sync/atomic"
 	"time"
 
 	"github.com/cosmos/cosmos-sdk/client/context"
@@ -69,7 +68,6 @@ type IService interface {
 	CheckForDuplicateIP(host string) bool
 	MixCount() int
 	GatewayCount() int
-	GetRemovedTopology() models.Topology
 	StartupPurge()
 }
 
@@ -81,7 +79,6 @@ func NewService(db IDb, isTest bool) *Service {
 		topologyRefreshed:        timemock.Now(),
 		activeTopology:           db.ActiveTopology(ReputationThreshold),
 		activeTopologyRefreshed:  timemock.Now(),
-		removedTopology:          db.RemovedTopology(),
 		removedTopologyRefreshed: timemock.Now(),
 	}
 
@@ -100,8 +97,7 @@ func lastDayReportsUpdater(service *Service) {
 
 	for {
 		<-ticker.C
-		batchReport := service.updateLastDayReports()
-		service.removeBrokenNodes(&batchReport)
+		service.updateLastDayReports()
 	}
 
 }
@@ -141,14 +137,6 @@ func (service *Service) updateLastDayReports() models.BatchMixStatusReport {
 	// service.db.SaveBatchMixStatusReport(batchReport)
 	// return batchReport
 	return models.BatchMixStatusReport{} // placeholder to compile
-}
-
-func (service *Service) removeBrokenNodes(batchReport *models.BatchMixStatusReport) {
-	// figure out which nodes should get removed
-	toRemove := service.batchShouldGetRemoved(batchReport)
-	if len(toRemove) > 0 {
-		service.db.BatchMoveToRemovedSet(toRemove)
-	}
 }
 
 // CreateMixStatus adds a new PersistedMixStatus in the orm.
@@ -266,9 +254,6 @@ func (service *Service) SaveStatusReport(status models.PersistedMixStatus) model
 		// if the status was up, there's no way the quality has decreased
 	} else {
 		service.db.UpdateReputation(status.PubKey, ReportFailureReputationDecrease)
-		if service.shouldGetRemoved(&report) {
-			service.db.MoveToRemovedSet(report.PubKey)
-		}
 	}
 
 	return report
@@ -378,25 +363,6 @@ func (service *Service) GatewayCount() int {
 	return len(topology.Gateways)
 }
 
-func (service *Service) GetRemovedTopology() models.Topology {
-	now := timemock.Now()
-	if now.Sub(service.removedTopologyRefreshed) > TopologyCacheTTL {
-		// if topology is not refreshing, start refreshing
-		if atomic.CompareAndSwapUint32(&service.removedTopologyRefreshing, TopologyNotRefreshing, TopologyRefreshing) {
-			// put in defer block to ensure it's going to get called if something crashes
-			defer func() {
-				service.removedTopologyRefreshing = TopologyNotRefreshing
-			}()
-
-			newTopology := service.db.RemovedTopology()
-			service.removedTopology = newTopology
-			service.removedTopologyRefreshed = now
-		}
-	}
-
-	return service.removedTopology
-}
-
 // StartupPurge moves any mixnode from the main topology into 'removed' if it is not running
 // version 0.9.2. The "50%" uptime requirement does not need to be checked here as if it's
 // not fulfilled, the node will be automatically moved to "removed set" on the first
@@ -414,5 +380,4 @@ func (service *Service) StartupPurge() {
 			nodesToRemove = append(nodesToRemove, gateway.IdentityKey)
 		}
 	}
-	service.db.BatchMoveToRemovedSet(nodesToRemove)
 }

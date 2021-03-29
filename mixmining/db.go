@@ -54,9 +54,6 @@ type IDb interface {
 	ActiveTopology(reputationThreshold int64) models.Topology
 
 	IpExists(ip string) bool
-	RemovedTopology() models.Topology
-	MoveToRemovedSet(pubkey string)
-	BatchMoveToRemovedSet(pubkeys []string)
 	GetNMostRecentMixStatuses(pubkey string, ipVersion string, n int) []models.PersistedMixStatus
 	ListMixStatusSinceWithLimit(pubkey string, ipVersion string, since int64, limit int) []models.PersistedMixStatus
 	RemoveOldStatuses(before int64)
