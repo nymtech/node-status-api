@@ -16,19 +16,14 @@ package mixmining
 
 import (
 	"fmt"
-	"io/ioutil"
-	"log"
-	"net"
-	"os"
-	"os/user"
-	"path"
-	"strings"
-
-	"gorm.io/gorm/clause"
-
 	"github.com/nymtech/node-status-api/models"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"io/ioutil"
+	"log"
+	"os"
+	"os/user"
+	"path"
 )
 
 // IDb holds status information
@@ -43,21 +38,9 @@ type IDb interface {
 	SaveMixStatusReport(models.MixStatusReport)
 	SaveBatchMixStatusReport(models.BatchMixStatusReport)
 
-	// moved from 'presence'
-	RegisterMix(mix models.RegisteredMix)
-	RegisterGateway(gateway models.RegisteredGateway)
-	UnregisterNode(id string) bool
-	UpdateReputation(id string, repIncrease int64) bool
-	BatchUpdateReputation(reputationChangeMap map[string]int64)
-	SetReputation(id string, newRep int64) bool
-	Topology() models.Topology
-	ActiveTopology(reputationThreshold int64) models.Topology
-
-	IpExists(ip string) bool
-	GetNMostRecentMixStatuses(pubkey string, ipVersion string, n int) []models.PersistedMixStatus
-	ListMixStatusSinceWithLimit(pubkey string, ipVersion string, since int64, limit int) []models.PersistedMixStatus
+	ListMixStatusSince(pubkey string, ipVersion string, since int64) []models.PersistedMixStatus
 	RemoveOldStatuses(before int64)
-	GetNodeMixHost(pubkey string) string
+	GetActiveNodes(since int64) []string
 }
 
 // Db is a hashtable that holds mixnode uptime mixmining
@@ -77,22 +60,6 @@ func NewDb(isTest bool) *Db {
 		log.Fatal(err)
 	}
 	if err := database.AutoMigrate(&models.MixStatusReport{}); err != nil {
-		log.Fatal(err)
-	}
-
-	// registered nodes migration
-	if err := database.AutoMigrate(&models.RegisteredMix{}); err != nil {
-		log.Fatal(err)
-	}
-	if err := database.AutoMigrate(&models.RegisteredGateway{}); err != nil {
-		log.Fatal(err)
-	}
-
-	// removed nodes migration
-	if err := database.AutoMigrate(&models.RemovedMix{}); err != nil {
-		log.Fatal(err)
-	}
-	if err := database.AutoMigrate(&models.RemovedGateway{}); err != nil {
 		log.Fatal(err)
 	}
 
@@ -153,11 +120,11 @@ func (db *Db) ListMixStatusDateRange(pubkey string, ipVersion string, start int6
 }
 
 // ListMixStatusSinceWithLimit lists all persisted mix statuses for a node for either IPv4 or IPv6 since the specified timestamp with the maximum of `limit` results
-func (db *Db) ListMixStatusSinceWithLimit(pubkey string, ipVersion string, since int64, limit int) []models.PersistedMixStatus {
+func (db *Db) ListMixStatusSince(pubkey string, ipVersion string, since int64) []models.PersistedMixStatus {
 	var statuses []models.PersistedMixStatus
 	// resultant query:
-	// SELECT * FROM (SELECT * FROM persisted_mix_statuses p WHERE p.pub_key = ? AND p.ip_version = ? AND p.timestamp >= ? LIMIT > ? ) ORDER BY timestamp desc;
-	if err := db.orm.Table("(?)", db.orm.Model(&models.PersistedMixStatus{}).Where("pub_key = ?", pubkey).Where("ip_version = ?", ipVersion).Where("timestamp >= ?", since).Limit(limit)).Order("timestamp desc").Find(&statuses).Error; err != nil {
+	// SELECT * FROM (SELECT * FROM persisted_mix_statuses p WHERE p.pub_key = ? AND p.ip_version = ? AND p.timestamp >= ? ) ORDER BY timestamp desc;
+	if err := db.orm.Table("(?)", db.orm.Model(&models.PersistedMixStatus{}).Where("pub_key = ?", pubkey).Where("ip_version = ?", ipVersion).Where("timestamp >= ?", since)).Order("timestamp desc").Find(&statuses).Error; err != nil {
 		return make([]models.PersistedMixStatus, 0)
 	}
 	return statuses
@@ -168,15 +135,6 @@ func (db *Db) RemoveOldStatuses(before int64) {
 	if err := db.orm.Unscoped().Where("timestamp < ?", before).Delete(&models.PersistedMixStatus{}).Error; err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "failed to remove old statuses from the database - %v\n", err)
 	}
-}
-
-// GetNMostRecentMixStatus lists `n` most recent persisted mix statuses for a node for either IPv4 or IPv6
-func (db *Db) GetNMostRecentMixStatuses(pubkey string, ipVersion string, n int) []models.PersistedMixStatus {
-	var statuses []models.PersistedMixStatus
-	if err := db.orm.Order("timestamp desc").Where("pub_key = ?", pubkey).Where("ip_version = ?", ipVersion).Limit(n).Find(&statuses).Error; err != nil {
-		return make([]models.PersistedMixStatus, 0)
-	}
-	return statuses
 }
 
 // SaveMixStatusReport creates or updates a status summary report for a given mixnode in the database
@@ -199,7 +157,7 @@ func (db *Db) SaveBatchMixStatusReport(report models.BatchMixStatusReport) {
 func (db *Db) LoadReport(pubkey string) models.MixStatusReport {
 	var report models.MixStatusReport
 
-	if retrieve := db.orm.First(&report, "pub_key  = ?", pubkey); retrieve.Error != nil {
+	if retrieve := db.orm.First(&report, "pub_key = ?", pubkey); retrieve.Error != nil {
 		fmt.Printf("ERROR while retrieving mix status report %+v", retrieve.Error)
 		return models.MixStatusReport{}
 	}
@@ -231,238 +189,18 @@ func (db *Db) BatchLoadReports(pubkeys []string) models.BatchMixStatusReport {
 	return models.BatchMixStatusReport{Report: reports}
 }
 
-func (db *Db) RegisterMix(mix models.RegisteredMix) {
-	db.orm.Unscoped().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "identity_key"}},
-		DoUpdates: clause.AssignmentColumns([]string{"mix_host", "sphinx_key", "version", "location", "layer", "registration_time", "deleted", "incentives_address"}),
-	}).Create(&mix)
+func (db *Db) GetActiveNodes(since int64) []string {
+	var reports []models.PersistedMixStatus
 
-	// if it was ever in "removed" set, delete it
-	db.orm.Unscoped().Where("identity_key = ?", mix.IdentityKey).Delete(&models.RemovedMix{})
-}
-
-func (db *Db) RegisterGateway(gateway models.RegisteredGateway) {
-	db.orm.Unscoped().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "identity_key"}},
-		DoUpdates: clause.AssignmentColumns([]string{"mix_host", "sphinx_key", "version", "location", "clients_host", "registration_time", "deleted", "incentives_address"}),
-	}).Create(&gateway)
-
-	// if it was ever in "removed" set, delete it
-	db.orm.Unscoped().Where("identity_key = ?", gateway.IdentityKey).Delete(&models.RemovedGateway{})
-}
-
-func (db *Db) allRegisteredMixes() []models.RegisteredMix {
-	var mixes []models.RegisteredMix
-	if err := db.orm.Find(&mixes).Error; err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "failed to read mixes from the database - %v\n", err)
-	}
-	return mixes
-}
-
-func (db *Db) activeRegisteredMixes(reputationThreshold int64) []models.RegisteredMix {
-	var mixes []models.RegisteredMix
-	if err := db.orm.Where("reputation >= ?", reputationThreshold).Find(&mixes).Error; err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "failed to read mixes from the database - %v\n", err)
-	}
-	return mixes
-}
-
-func (db *Db) allRegisteredGateways() []models.RegisteredGateway {
-	var gateways []models.RegisteredGateway
-	if err := db.orm.Find(&gateways).Error; err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "failed to read gateways from the database - %v\n", err)
-	}
-	return gateways
-}
-
-func (db *Db) activeRegisteredGateways(reputationThreshold int64) []models.RegisteredGateway {
-	var gateways []models.RegisteredGateway
-	if err := db.orm.Where("reputation >= ?", reputationThreshold).Find(&gateways).Error; err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "failed to read gateways from the database - %v\n", err)
-	}
-	return gateways
-}
-
-func (db *Db) UnregisterNode(id string) bool {
-	res := db.orm.Where("identity_key = ?", id).Delete(&models.RegisteredMix{})
-	if res.Error != nil {
-		return false
-	}
-	if res.RowsAffected > 0 {
-		// now try the same for 'removed mix' - remember, all we do are soft deletes, and a removed mix
-		// can only exist if there used to be an entry for 'registered mix' (don't blame me, blame gorm + sql :) )
-		res = db.orm.Where("identity_key = ?", id).Delete(&models.RemovedMix{})
-		if res.Error != nil {
-			return false
-		}
-		return true
+	if err := db.orm.Select("pub_key").Where("timestamp > ?", since).Group("pub_key").Find(&reports).Error; err != nil {
+		fmt.Printf("ERROR while retrieving currently active nodes %+v", err)
+		return []string{}
 	}
 
-	res = db.orm.Where("identity_key = ?", id).Delete(&models.RegisteredGateway{})
-	if res.Error != nil {
-		return false
-	}
-	if res.RowsAffected > 0 {
-		res = db.orm.Where("identity_key = ?", id).Delete(&models.RemovedGateway{})
-		if res.Error != nil {
-			return false
-		}
-		return true
+	keys := make([]string, len(reports))
+	for i, report := range reports {
+		keys[i] = report.PubKey
 	}
 
-	return false
-}
-
-func (db *Db) SetReputation(id string, newRep int64) bool {
-	res := db.orm.Model(&models.RegisteredMix{}).Where("identity_key = ?", id).Update("reputation", newRep)
-	if res.Error != nil {
-		return false
-	}
-	if res.RowsAffected > 0 {
-		return true
-	}
-
-	res = db.orm.Model(&models.RegisteredGateway{}).Where("identity_key = ?", id).Update("reputation", newRep)
-	if res.Error != nil {
-		return false
-	}
-	if res.RowsAffected > 0 {
-		return true
-	} else {
-		return false
-	}
-}
-
-func (db *Db) BatchUpdateReputation(reputationChangeMap map[string]int64) {
-	for id, repChange := range reputationChangeMap {
-		// ensuring reputation will not go negative (haha, this can probably be solved in a simpler way inside SQL, but hey, it works)
-		if repChange < 0 {
-			res := db.orm.Model(&models.RegisteredMix{}).Where("identity_key = ? AND reputation >= ?", id, -repChange).Update("reputation", gorm.Expr("reputation + ?", repChange))
-			// TODO: rollback on fail here??
-			if res.RowsAffected == 0 {
-				db.orm.Model(&models.RegisteredGateway{}).Where("identity_key = ? AND reputation >= ?", id, -repChange).Update("reputation", gorm.Expr("reputation + ?", repChange))
-			}
-		} else {
-			res := db.orm.Model(&models.RegisteredMix{}).Where("identity_key = ?", id).Update("reputation", gorm.Expr("reputation + ?", repChange))
-			// TODO: rollback on fail here??
-			if res.RowsAffected == 0 {
-				db.orm.Model(&models.RegisteredGateway{}).Where("identity_key = ?", id).Update("reputation", gorm.Expr("reputation + ?", repChange))
-			}
-		}
-	}
-}
-
-func (db *Db) UpdateReputation(id string, repIncrease int64) bool {
-	// ensuring reputation will not go negative (haha, this can probably be solved in a simpler way inside SQL, but hey, it works)
-	if repIncrease < 0 {
-		res := db.orm.Model(&models.RegisteredMix{}).Where("identity_key = ? AND reputation >= ?", id, -repIncrease).Update("reputation", gorm.Expr("reputation + ?", repIncrease))
-		if res.Error != nil {
-			return false
-		}
-		if res.RowsAffected > 0 {
-			return true
-		}
-
-		res = db.orm.Model(&models.RegisteredGateway{}).Where("identity_key = ? AND reputation >= ?", id, -repIncrease).Update("reputation", gorm.Expr("reputation + ?", repIncrease))
-		if res.Error != nil {
-			return false
-		}
-
-		if res.RowsAffected > 0 {
-			return true
-		} else {
-			return false
-		}
-	} else {
-		res := db.orm.Model(&models.RegisteredMix{}).Where("identity_key = ?", id).Update("reputation", gorm.Expr("reputation + ?", repIncrease))
-
-		if res.Error != nil {
-			return false
-		}
-		if res.RowsAffected > 0 {
-			return true
-		}
-
-		res = db.orm.Model(&models.RegisteredGateway{}).Where("identity_key = ?", id).Update("reputation", gorm.Expr("reputation + ?", repIncrease))
-		if res.Error != nil {
-			return false
-		}
-
-		if res.RowsAffected > 0 {
-			return true
-		} else {
-			return false
-		}
-	}
-}
-
-func (db *Db) Topology() models.Topology {
-	// TODO: if we keep it (and I doubt it, because it will get moved onto blockchain), this
-	// should be done as a single query rather than as two separate ones.
-	mixes := db.allRegisteredMixes()
-	gateways := db.allRegisteredGateways()
-
-	return models.Topology{
-		MixNodes: mixes,
-		Gateways: gateways,
-	}
-}
-
-func (db *Db) ActiveTopology(reputationThreshold int64) models.Topology {
-	// TODO: if we keep it (and I doubt it, because it will get moved onto blockchain), this
-	// should be done as a single query rather than as two separate ones.
-	mixes := db.activeRegisteredMixes(reputationThreshold)
-	gateways := db.activeRegisteredGateways(reputationThreshold)
-
-	return models.Topology{
-		MixNodes: mixes,
-		Gateways: gateways,
-	}
-}
-
-func (db *Db) IpExists(ip string) bool {
-	ip, _, err := net.SplitHostPort(ip)
-	if err != nil {
-		// I guess we got a domain name?
-		split := strings.Split(ip, ":")
-		chunks := len(split)
-		if chunks != 2 {
-			// no idea what we got here
-			// return true to disallow registration for this address
-			return true
-		}
-
-		ip = split[0]
-	}
-
-	if db.orm.Where("mix_host LIKE ?", "%"+ip+"%").Find(&models.RegisteredMix{}).RowsAffected > 0 {
-		return true
-	} else if db.orm.Where("mix_host LIKE ? OR clients_host LIKE ?", "%"+ip+"%", "%"+ip+"%").Find(&models.RegisteredGateway{}).RowsAffected > 0 {
-		return true
-	} else {
-		return false
-	}
-}
-
-func (db *Db) GetNodeMixHost(pubkey string) string {
-	var mix models.RegisteredMix
-
-	if err := db.orm.Unscoped().Where("identity_key = ?", pubkey).Find(&mix).Limit(1).Error; err != nil {
-		return ""
-	}
-
-	if mix.MixHost != "" {
-		return mix.MixHost
-	}
-
-	var gateway models.RegisteredGateway
-	if err := db.orm.Unscoped().Where("identity_key = ?", pubkey).Find(&gateway).Limit(1).Error; err != nil {
-		return ""
-	}
-
-	if gateway.MixHost != "" {
-		return gateway.MixHost
-	}
-
-	return ""
+	return keys
 }

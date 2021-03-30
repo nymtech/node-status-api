@@ -17,41 +17,13 @@ package mixmining
 import (
 	"time"
 
-	"github.com/cosmos/cosmos-sdk/client/context"
-	"github.com/cosmos/cosmos-sdk/client/rpc"
-
 	"github.com/BorisBorshevsky/timemock"
 	"github.com/nymtech/node-status-api/models"
 )
 
-// so if you can mix ipv4 but not ipv6, your reputation will go down but not as fast as if you didn't mix at all
-const ReportSuccessReputationIncrease = int64(3)
-const ReportFailureReputationDecrease = int64(-2)
-const ReputationThreshold = int64(100)
-const TopologyCacheTTL = time.Second * 30
-
-const Last5MinutesReports = 5
-const LastHourReports = 50
-const LastDayReports = 1000
-
-const TopologyRefreshing = 1
-const TopologyNotRefreshing = 0
-
 // Service struct
 type Service struct {
 	db     IDb
-	cliCtx context.CLIContext
-
-	topology                 models.Topology
-	topologyRefreshed        time.Time
-	activeTopology           models.Topology
-	activeTopologyRefreshed  time.Time
-	removedTopology          models.Topology
-	removedTopologyRefreshed time.Time
-
-	topologyRefreshing        uint32
-	activeTopologyRefreshing  uint32
-	removedTopologyRefreshing uint32
 }
 
 // IService defines the REST service interface for mixmining.
@@ -64,22 +36,12 @@ type IService interface {
 	SaveBatchStatusReport(status []models.PersistedMixStatus) models.BatchMixStatusReport
 	BatchCreateMixStatus(batchMixStatus models.BatchMixStatus) []models.PersistedMixStatus
 	BatchGetMixStatusReport() models.BatchMixStatusReport
-
-	CheckForDuplicateIP(host string) bool
-	MixCount() int
-	GatewayCount() int
-	StartupPurge()
 }
 
 // NewService constructor
 func NewService(db IDb, isTest bool) *Service {
 	service := &Service{
-		db:                       db,
-		topology:                 db.Topology(),
-		topologyRefreshed:        timemock.Now(),
-		activeTopology:           db.ActiveTopology(ReputationThreshold),
-		activeTopologyRefreshed:  timemock.Now(),
-		removedTopologyRefreshed: timemock.Now(),
+		db: db,
 	}
 
 	if !isTest {
@@ -114,29 +76,25 @@ func oldStatusesPurger(service *Service) {
 }
 
 func (service *Service) updateLastDayReports() models.BatchMixStatusReport {
-	// set :reportKeys to a list of the public keys of nodes that have been seen in the past 24 hours (retrieve from the database)
-	// :allKeys = SELECT pub_key FROM mix_status_reports WHERE timestamp > now - 24 hours // gives a list of all mix status reports
-	// loop through :allKeys to de-duplicate the keys or use UNIQUE
-	// remove the limit on CalculateUptimeSince().
+	dayAgo := timemock.Now().Add(-time.Hour * 24).UnixNano()
+	allActive := service.db.GetActiveNodes(dayAgo)
 
-	// JS: uncomment below!
-	// dayAgo := timemock.Now().Add(time.Duration(-time.Hour * 24)).UnixNano()
-	// batchReport := service.db.BatchLoadReports(reportKeys)
-	// for idx := range batchReport.Report {
-	// 	report := &batchReport.Report[idx]
-	// 	lastDayUptime := service.CalculateUptimeSince(report.PubKey, "4", dayAgo, LastDayReports)
-	// 	if lastDayUptime == -1 {
-	// 		// there were no reports to calculate uptime with
-	// 		continue
-	// 	}
+	batchReport := service.db.BatchLoadReports(allActive)
+	for _, report := range batchReport.Report {
+		lastDayUptime := service.CalculateUptime(report.PubKey, "4", dayAgo)
+		if lastDayUptime == -1 {
+			// there were no reports to calculate uptime with
+			// but this should NEVER happen as we only loaded reports for the nodes that received status data
+			// in last 24h
+			continue
+		}
 
-	// 	report.LastDayIPV4 = lastDayUptime
-	// 	report.LastDayIPV6 = service.CalculateUptimeSince(report.PubKey, "6", dayAgo, LastDayReports)
-	// }
+		report.LastDayIPV4 = lastDayUptime
+		report.LastDayIPV6 = service.CalculateUptime(report.PubKey, "6", dayAgo)
+	}
 
-	// service.db.SaveBatchMixStatusReport(batchReport)
-	// return batchReport
-	return models.BatchMixStatusReport{} // placeholder to compile
+	service.db.SaveBatchMixStatusReport(batchReport)
+	return batchReport
 }
 
 // CreateMixStatus adds a new PersistedMixStatus in the orm.
@@ -194,7 +152,6 @@ func (service *Service) SaveBatchStatusReport(status []models.PersistedMixStatus
 	// that's super crude but I don't think db results are guaranteed to come in order, plus some entries might
 	// not exist
 	reportMap := make(map[string]int)
-	reputationChangeMap := make(map[string]int64)
 	for i, report := range batchReport.Report {
 		reportMap[report.PubKey] = i
 	}
@@ -202,26 +159,15 @@ func (service *Service) SaveBatchStatusReport(status []models.PersistedMixStatus
 	for _, mixStatus := range status {
 		if reportIdx, ok := reportMap[mixStatus.PubKey]; ok {
 			service.updateReportUpToLastHour(&batchReport.Report[reportIdx], &mixStatus)
-			if *mixStatus.Up {
-				reputationChangeMap[mixStatus.PubKey] += ReportSuccessReputationIncrease
-			} else {
-				reputationChangeMap[mixStatus.PubKey] += ReportFailureReputationDecrease
-			}
 		} else {
 			var freshReport models.MixStatusReport
 			service.updateReportUpToLastHour(&freshReport, &mixStatus)
 			batchReport.Report = append(batchReport.Report, freshReport)
 			reportMap[freshReport.PubKey] = len(batchReport.Report) - 1
-			if *mixStatus.Up {
-				reputationChangeMap[mixStatus.PubKey] = ReportSuccessReputationIncrease
-			} else {
-				reputationChangeMap[mixStatus.PubKey] = ReportFailureReputationDecrease
-			}
 		}
 	}
 
 	service.db.SaveBatchMixStatusReport(batchReport)
-	service.db.BatchUpdateReputation(reputationChangeMap)
 
 	return batchReport
 }
@@ -231,12 +177,12 @@ func (service *Service) updateReportUpToLastHour(report *models.MixStatusReport,
 
 	if status.IPVersion == "4" {
 		report.MostRecentIPV4 = *status.Up
-		report.Last5MinutesIPV4 = service.CalculateUptime(status.PubKey, "4", Last5MinutesReports)
-		report.LastHourIPV4 = service.CalculateUptime(status.PubKey, "4", LastHourReports)
+		report.Last5MinutesIPV4 = service.CalculateUptime(status.PubKey, "4", minutesAgo(5))
+		report.LastHourIPV4 = service.CalculateUptime(status.PubKey, "4", minutesAgo(60))
 	} else if status.IPVersion == "6" {
 		report.MostRecentIPV6 = *status.Up
-		report.Last5MinutesIPV6 = service.CalculateUptime(status.PubKey, "6", Last5MinutesReports)
-		report.LastHourIPV6 = service.CalculateUptime(status.PubKey, "6", LastHourReports)
+		report.Last5MinutesIPV6 = service.CalculateUptime(status.PubKey, "6", minutesAgo(5))
+		report.LastHourIPV6 = service.CalculateUptime(status.PubKey, "6", minutesAgo(60))
 	}
 }
 
@@ -249,80 +195,11 @@ func (service *Service) SaveStatusReport(status models.PersistedMixStatus) model
 	service.updateReportUpToLastHour(&report, &status)
 	service.db.SaveMixStatusReport(report)
 
-	if *status.Up {
-		service.db.UpdateReputation(status.PubKey, ReportSuccessReputationIncrease)
-		// if the status was up, there's no way the quality has decreased
-	} else {
-		service.db.UpdateReputation(status.PubKey, ReportFailureReputationDecrease)
-	}
-
 	return report
 }
 
-// shouldGetRemoved is called upon receiving mix status for this particular node. It determines whether the node is still
-// eligible to be part of the main topology or should moved into 'removed set'
-func (service *Service) shouldGetRemoved(report *models.MixStatusReport) bool {
-	// check if last 24h ipv4 uptime is > 50%
-	if report.LastDayIPV4 < 50 {
-		return true
-	}
-
-	// if it ever mixed any ipv6 packet, do the same check for ipv6 uptime
-	if report.LastDayIPV6 > 0 && report.LastDayIPV6 < 50 {
-		return true
-	}
-
-	// TODO: does it make sense to also check reputation here? But if we do it, then each new node would get
-	// removed immediately before they even get a chance to build it up
-
-	return false
-}
-
-// batchShouldGetRemoved is called upon receiving batch mix status for the set of those particular nodes.
-// It determines whether the nodes are still eligible to be part of the main topology or should moved into 'removed set'
-func (service *Service) batchShouldGetRemoved(batchReport *models.BatchMixStatusReport) []string {
-	broken := make([]string, 0)
-
-	for _, report := range batchReport.Report {
-		// check if last 24h ipv4 uptime is > 50%
-		if report.LastDayIPV4 < 50 {
-			broken = append(broken, report.PubKey)
-			continue
-		}
-
-		// if it ever mixed any ipv6 packet, do the same check for ipv6 uptime
-		if report.LastDayIPV6 > 0 && report.LastDayIPV6 < 50 {
-			broken = append(broken, report.PubKey)
-			continue
-		}
-
-		// TODO: does it make sense to also check reputation here? But if we do it, then each new node would get
-		// removed immediately before they even get a chance to build it up
-	}
-
-	return broken
-}
-
-// CalculateUptime calculates percentage uptime for a given node, protocol since a specific time
-func (service *Service) CalculateUptime(pubkey string, ipVersion string, numReports int) int {
-	statuses := service.db.GetNMostRecentMixStatuses(pubkey, ipVersion, numReports)
-	numStatuses := len(statuses)
-	if numStatuses == 0 {
-		// this can only happen to the goroutine calculating uptime for last 1000 reports
-		return -1
-	}
-	up := 0
-	for _, status := range statuses {
-		if *status.Up {
-			up = up + 1
-		}
-	}
-
-	return service.calculatePercent(up, numStatuses)
-}
-
-func (service *Service) CalculateUptimeSince(pubkey string, ipVersion string, since int64, numReports int) int {
-	statuses := service.db.ListMixStatusSinceWithLimit(pubkey, ipVersion, since, numReports)
+func (service *Service) CalculateUptime(pubkey string, ipVersion string, since int64) int {
+	statuses := service.db.ListMixStatusSince(pubkey, ipVersion, since)
 	numStatuses := len(statuses)
 	if numStatuses == 0 {
 		// this can only happen to the goroutine calculating uptime for last 1000 reports
@@ -342,42 +219,7 @@ func (service *Service) calculatePercent(num int, outOf int) int {
 	return int(float32(num) / float32(outOf) * 100)
 }
 
-func (service *Service) CheckForDuplicateIP(host string) bool {
-	return service.db.IpExists(host)
-}
-
-func emptyValidators() rpc.ResultValidatorsOutput {
-	return rpc.ResultValidatorsOutput{
-		BlockHeight: 0,
-		Validators:  []rpc.ValidatorOutput{},
-	}
-}
-
-func (service *Service) MixCount() int {
-	topology := service.db.Topology()
-	return len(topology.MixNodes)
-}
-
-func (service *Service) GatewayCount() int {
-	topology := service.db.Topology()
-	return len(topology.Gateways)
-}
-
-// StartupPurge moves any mixnode from the main topology into 'removed' if it is not running
-// version 0.9.2. The "50%" uptime requirement does not need to be checked here as if it's
-// not fulfilled, the node will be automatically moved to "removed set" on the first
-// run of the network monitor
-func (service *Service) StartupPurge() {
-	nodesToRemove := make([]string, 0)
-	topology := service.db.Topology()
-	for _, mix := range topology.MixNodes {
-		if mix.Version != SystemVersion {
-			nodesToRemove = append(nodesToRemove, mix.IdentityKey)
-		}
-	}
-	for _, gateway := range topology.Gateways {
-		if gateway.Version != SystemVersion {
-			nodesToRemove = append(nodesToRemove, gateway.IdentityKey)
-		}
-	}
+func minutesAgo(minutes int) int64 {
+	now := timemock.Now()
+	return now.Add(time.Duration(-minutes) * time.Minute).UnixNano()
 }

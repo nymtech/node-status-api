@@ -15,12 +15,12 @@
 package mixmining
 
 import (
-	"time"
-
+	"github.com/BorisBorshevsky/timemock"
 	"github.com/nymtech/node-status-api/mixmining/fixtures"
 	"github.com/nymtech/node-status-api/models"
 	. "github.com/onsi/ginkgo"
 	"github.com/stretchr/testify/assert"
+	"time"
 )
 
 var _ = Describe("The mixmining db", func() {
@@ -186,419 +186,49 @@ var _ = Describe("The mixmining db", func() {
 		})
 	})
 
-	Describe("Registering mix node", func() {
-		Context("For the first time", func() {
-			It("should add the entry, with timestamp and initial reputation, to database", func() {
-				db := NewDb(true)
-				all := db.allRegisteredMixes()
-				assert.Len(GinkgoT(), all, 0)
-
-				mix := fixtures.GoodRegisteredMix()
-				startTime := time.Now()
-				db.RegisterMix(mix)
-				endTime := time.Now()
-
-				all = db.allRegisteredMixes()
-				assert.Len(GinkgoT(), all, 1)
-				assert.True(GinkgoT(), all[0].RegistrationTime >= startTime.UnixNano())
-				assert.True(GinkgoT(), all[0].RegistrationTime <= endTime.UnixNano())
-
-				// this is just so the comparison is easier
-				all[0].RegistrationTime = 0
-				assert.Equal(GinkgoT(), mix, all[0])
-			})
-		})
-		Context("For second time", func() {
-			It("should overwrite the existing entry without making a new one", func() {
-				db := NewDb(true)
-				all := db.allRegisteredMixes()
-				assert.Len(GinkgoT(), all, 0)
-
-				initialMix := fixtures.GoodRegisteredMix()
-				updatedInitialMix := fixtures.GoodRegisteredMix()
-				updatedInitialMix.Location = "New Foomplandia"
-				updatedInitialMix.MixHost = "100.100.100.100:1789"
-
-				db.RegisterMix(initialMix)
-				all = db.allRegisteredMixes()
-				initRegTime := all[0].RegistrationTime
-				assert.Len(GinkgoT(), all, 1)
-
-				db.RegisterMix(updatedInitialMix)
-				all = db.allRegisteredMixes()
-
-				assert.Len(GinkgoT(), all, 1)
-				// since we 'registered' again we should get new registration time
-				assert.True(GinkgoT(), all[0].RegistrationTime > initRegTime)
-
-				// this is just so the comparison is easier
-				all[0].RegistrationTime = 0
-				assert.Equal(GinkgoT(), updatedInitialMix, all[0])
-			})
-		})
-
-		Context("Multiple with different identity", func() {
-			It("Should not overwrite each other", func() {
-				db := NewDb(true)
-				all := db.allRegisteredMixes()
-				assert.Len(GinkgoT(), all, 0)
-
-				initialMix1 := fixtures.GoodRegisteredMix()
-				initialMix2 := fixtures.GoodRegisteredMix()
-				initialMix2.IdentityKey = "NewID"
-
-				db.RegisterMix(initialMix1)
-				db.RegisterMix(initialMix2)
-				all = db.allRegisteredMixes()
-				assert.Len(GinkgoT(), all, 2)
-			})
-		})
-	})
-
-	Describe("Removing mix node", func() {
-		Context("If it exists", func() {
-			It("Should get rid of it", func() {
-				db := NewDb(true)
-				all := db.allRegisteredMixes()
-				assert.Len(GinkgoT(), all, 0)
-
-				mix := fixtures.GoodRegisteredMix()
-				db.RegisterMix(mix)
-				wasRemoved := db.UnregisterNode(mix.IdentityKey)
-				assert.True(GinkgoT(), wasRemoved)
-
-				all = db.allRegisteredMixes()
-				assert.Len(GinkgoT(), all, 0)
-			})
-		})
-
-		Context("If it doesn't exist", func() {
-			It("Shouldn't do anything", func() {
-				db := NewDb(true)
-				all := db.allRegisteredMixes()
-				assert.Len(GinkgoT(), all, 0)
-
-				wasRemoved := db.UnregisterNode("foomp")
-				assert.False(GinkgoT(), wasRemoved)
-
-				all = db.allRegisteredMixes()
-				assert.Len(GinkgoT(), all, 0)
-			})
-		})
-	})
-
-	Describe("Registering gateway", func() {
-		Context("For the first time", func() {
-			It("should add the entry, with timestamp and initial reputation, to database", func() {
-				db := NewDb(true)
-				all := db.allRegisteredGateways()
-				assert.Len(GinkgoT(), all, 0)
-
-				gateway := fixtures.GoodRegisteredGateway()
-				startTime := time.Now()
-				db.RegisterGateway(gateway)
-				endTime := time.Now()
-
-				all = db.allRegisteredGateways()
-				assert.Len(GinkgoT(), all, 1)
-				assert.True(GinkgoT(), all[0].RegistrationTime >= startTime.UnixNano())
-				assert.True(GinkgoT(), all[0].RegistrationTime <= endTime.UnixNano())
-
-				// this is just so the comparison is easier
-				all[0].RegistrationTime = 0
-				assert.Equal(GinkgoT(), gateway, all[0])
-			})
-		})
-		Context("For second time", func() {
-			It("should overwrite the existing entry without making a new one", func() {
-				db := NewDb(true)
-				all := db.allRegisteredGateways()
-				assert.Len(GinkgoT(), all, 0)
-
-				initialGateway := fixtures.GoodRegisteredGateway()
-				updatedInitialGateway := fixtures.GoodRegisteredGateway()
-				updatedInitialGateway.Location = "New Foomplandia"
-				updatedInitialGateway.MixHost = "100.100.100.100:1789"
-
-				db.RegisterGateway(initialGateway)
-				all = db.allRegisteredGateways()
-				initRegTime := all[0].RegistrationTime
-				assert.Len(GinkgoT(), all, 1)
-
-				db.RegisterGateway(updatedInitialGateway)
-				all = db.allRegisteredGateways()
-
-				assert.Len(GinkgoT(), all, 1)
-				// since we 'registered' again we should get new registration time
-				assert.True(GinkgoT(), all[0].RegistrationTime > initRegTime)
-
-				// this is just so the comparison is easier
-				all[0].RegistrationTime = 0
-				assert.Equal(GinkgoT(), updatedInitialGateway, all[0])
-			})
-		})
-
-		Context("Multiple with different identity", func() {
-			It("Should not overwrite each other", func() {
-				db := NewDb(true)
-				all := db.allRegisteredGateways()
-				assert.Len(GinkgoT(), all, 0)
-
-				initialGateway1 := fixtures.GoodRegisteredGateway()
-				initialGateway2 := fixtures.GoodRegisteredGateway()
-				initialGateway2.IdentityKey = "NewID"
-
-				db.RegisterGateway(initialGateway1)
-				db.RegisterGateway(initialGateway2)
-				all = db.allRegisteredGateways()
-				assert.Len(GinkgoT(), all, 2)
-			})
-		})
-	})
-
-	Describe("Removing gateway node", func() {
-		Context("If it exists", func() {
-			It("Should get rid of it", func() {
-				db := NewDb(true)
-				all := db.allRegisteredGateways()
-				assert.Len(GinkgoT(), all, 0)
-
-				gateway := fixtures.GoodRegisteredGateway()
-				db.RegisterGateway(gateway)
-				wasRemoved := db.UnregisterNode(gateway.IdentityKey)
-				assert.True(GinkgoT(), wasRemoved)
-
-				all = db.allRegisteredGateways()
-				assert.Len(GinkgoT(), all, 0)
-			})
-		})
-	})
-
-	Describe("Setting reputation", func() {
-		Context("For existing node", func() {
-			It("Sets it to defined value", func() {
-				db := NewDb(true)
-				all := db.allRegisteredMixes()
-				assert.Len(GinkgoT(), all, 0)
-
-				mix := fixtures.GoodRegisteredMix()
-				db.RegisterMix(mix)
-				all = db.allRegisteredMixes()
-				assert.Equal(GinkgoT(), all[0].Reputation, int64(0))
-
-				wasChanged := db.SetReputation(mix.IdentityKey, 42)
-				assert.True(GinkgoT(), wasChanged)
-
-				all = db.allRegisteredMixes()
-				assert.Equal(GinkgoT(), all[0].Reputation, int64(42))
-			})
-		})
-
-		Context("For non-existent node", func() {
-			It("Does nothing", func() {
-				db := NewDb(true)
-				all := db.allRegisteredMixes()
-				assert.Len(GinkgoT(), all, 0)
-
-				wasChanged := db.SetReputation("foomp", 42)
-				assert.False(GinkgoT(), wasChanged)
-			})
-		})
-	})
-
-	Describe("Getting topology", func() {
-		Context("With no registered nodes", func() {
-			It("Returns empty slices", func() {
-				db := NewDb(true)
-				allMix := db.allRegisteredMixes()
-				assert.Len(GinkgoT(), allMix, 0)
-
-				allGate := db.allRegisteredGateways()
-				assert.Len(GinkgoT(), allGate, 0)
-
-				topology := db.Topology()
-				assert.Len(GinkgoT(), topology.MixNodes, 0)
-				assert.Len(GinkgoT(), topology.Gateways, 0)
-			})
-		})
-		Context("With registered nodes", func() {
-			It("Returns all registered mixnodes and gateways", func() {
-				db := NewDb(true)
-				allMix := db.allRegisteredMixes()
-				assert.Len(GinkgoT(), allMix, 0)
-
-				allGate := db.allRegisteredGateways()
-				assert.Len(GinkgoT(), allGate, 0)
-
-				mix1 := fixtures.GoodRegisteredMix()
-				mix2 := fixtures.GoodRegisteredMix()
-				mix2.IdentityKey = "aaa"
-
-				gate1 := fixtures.GoodRegisteredGateway()
-				gate2 := fixtures.GoodRegisteredGateway()
-				gate2.IdentityKey = "bbb"
-
-				db.RegisterMix(mix1)
-				db.RegisterMix(mix2)
-
-				db.RegisterGateway(gate1)
-				db.RegisterGateway(gate2)
-
-				topology := db.Topology()
-				assert.Len(GinkgoT(), topology.MixNodes, 2)
-				assert.Len(GinkgoT(), topology.Gateways, 2)
-			})
-		})
-	})
-
-	Describe("Getting active topology", func() {
-		Context("With registered nodes but below reputation threshold", func() {
-			It("Returns empty slices", func() {
-				db := NewDb(true)
-				allMix := db.allRegisteredMixes()
-				assert.Len(GinkgoT(), allMix, 0)
-
-				allGate := db.allRegisteredGateways()
-				assert.Len(GinkgoT(), allGate, 0)
-
-				mix1 := fixtures.GoodRegisteredMix()
-				gate1 := fixtures.GoodRegisteredGateway()
-
-				db.RegisterMix(mix1)
-				db.RegisterGateway(gate1)
-
-				db.SetReputation(mix1.IdentityKey, ReputationThreshold-1)
-				db.SetReputation(gate1.IdentityKey, ReputationThreshold-1)
-
-				topology := db.ActiveTopology(ReputationThreshold)
-				assert.Len(GinkgoT(), topology.MixNodes, 0)
-				assert.Len(GinkgoT(), topology.Gateways, 0)
-			})
-		})
-
-		Context("With registered nodes, some above reputation threshold", func() {
-			It("Returns only the nodes above the reputation threshold", func() {
-				db := NewDb(true)
-				allMix := db.allRegisteredMixes()
-				assert.Len(GinkgoT(), allMix, 0)
-
-				allGate := db.allRegisteredGateways()
-				assert.Len(GinkgoT(), allGate, 0)
-
-				mix1 := fixtures.GoodRegisteredMix()
-				mix2 := fixtures.GoodRegisteredMix()
-				mix2.IdentityKey = "aaa"
-
-				gate1 := fixtures.GoodRegisteredGateway()
-				gate2 := fixtures.GoodRegisteredGateway()
-				gate2.IdentityKey = "bbb"
-
-				db.RegisterMix(mix1)
-				db.RegisterMix(mix2)
-
-				db.RegisterGateway(gate1)
-				db.RegisterGateway(gate2)
-
-				db.SetReputation(mix1.IdentityKey, ReputationThreshold-1)
-				db.SetReputation(gate1.IdentityKey, ReputationThreshold-1)
-				db.SetReputation(mix2.IdentityKey, ReputationThreshold)
-				db.SetReputation(gate2.IdentityKey, ReputationThreshold)
-
-				topology := db.ActiveTopology(ReputationThreshold)
-				// this is just so the comparison is easier
-				topology.MixNodes[0].RegistrationTime = 0
-				topology.Gateways[0].RegistrationTime = 0
-
-				assert.Equal(GinkgoT(), topology.MixNodes[0].Reputation, ReputationThreshold)
-				assert.Equal(GinkgoT(), topology.Gateways[0].Reputation, ReputationThreshold)
-
-				topology.MixNodes[0].Reputation = int64(0)
-				topology.Gateways[0].Reputation = int64(0)
-
-				assert.Equal(GinkgoT(), topology.MixNodes[0], mix2)
-				assert.Equal(GinkgoT(), topology.Gateways[0], gate2)
-			})
-		})
-	})
-
-	Describe("checking for duplicate ips", func() {
-		It("works for ipv4", func() {
-			ip1 := "1.2.3.4:1789"
-			ip2 := "1.2.3.4:1790"
-			db := NewDb(true)
-			mix1 := fixtures.GoodRegisteredMix()
-			mix1.MixHost = ip1
-
-			assert.False(GinkgoT(), db.IpExists(ip1))
-			assert.False(GinkgoT(), db.IpExists(ip2))
-
-			db.RegisterMix(mix1)
-
-			assert.True(GinkgoT(), db.IpExists(ip1))
-			assert.True(GinkgoT(), db.IpExists(ip2))
-		})
-
-		It("works for ipv6", func() {
-			ipv6Normal1 := "[2001:0db8:0a0b:12f0:0000:0000:0000:0001]:1789"
-			ipv6Normal2 := "[2001:0db8:0a0b:12f0:0000:0000:0000:0001]:1790"
-			ipv6Compressed1 := "[2001:db8:a0b:12f0::1]:1789"
-			ipv6Compressed2 := "[2001:db8:a0b:12f0::1]:1790"
+	Describe("Getting active nodes", func() {
+		It("Returns list of public keys of nodes seen in specified time period without duplicates", func() {
+			now := timemock.Now()
 
 			db := NewDb(true)
-			mix1 := fixtures.GoodRegisteredMix()
-			mix1.MixHost = ipv6Normal1
 
-			mix2 := fixtures.GoodRegisteredMix()
-			// change id
-			mix2.IdentityKey = "foomp"
-			mix2.MixHost = ipv6Compressed1
+			status1 := models.PersistedMixStatus{
+				MixStatus: models.MixStatus{
+					PubKey:           "aaa",
+				},
+				Timestamp: now.UnixNano(),
+			}
 
-			assert.False(GinkgoT(), db.IpExists(ipv6Normal1))
-			assert.False(GinkgoT(), db.IpExists(ipv6Normal2))
-			assert.False(GinkgoT(), db.IpExists(ipv6Compressed1))
-			assert.False(GinkgoT(), db.IpExists(ipv6Compressed2))
+			status2 := models.PersistedMixStatus{
+				MixStatus: models.MixStatus{
+					PubKey:           "bbb",
+				},
+				Timestamp: now.UnixNano(),
+			}
 
-			db.RegisterMix(mix1)
-			db.RegisterMix(mix2)
+			status3 := models.PersistedMixStatus{
+				MixStatus: models.MixStatus{
+					PubKey:           "ccc",
+				},
+				Timestamp: now.UnixNano(),
+			}
 
-			assert.True(GinkgoT(), db.IpExists(ipv6Normal1))
-			assert.True(GinkgoT(), db.IpExists(ipv6Normal2))
-			assert.True(GinkgoT(), db.IpExists(ipv6Compressed1))
-			assert.True(GinkgoT(), db.IpExists(ipv6Compressed2))
-		})
+			status4Duplicate := models.PersistedMixStatus{
+				MixStatus: models.MixStatus{
+					PubKey:           "ccc",
+				},
+				Timestamp: timemock.Now().UnixNano(),
+			}
 
-		It("works for domain name", func() {
-			name1 := "foomp.com:1789"
-			name2 := "foomp.com:1790"
+			db.AddMixStatus(status1)
+			db.AddMixStatus(status2)
+			db.AddMixStatus(status3)
+			db.AddMixStatus(status4Duplicate)
 
-			db := NewDb(true)
-			mix1 := fixtures.GoodRegisteredMix()
-			mix1.MixHost = name1
+			dayAgo := now.Add(time.Duration(-1) * time.Hour * 24).UnixNano()
+			active := db.GetActiveNodes(dayAgo)
 
-			assert.False(GinkgoT(), db.IpExists(name1))
-			assert.False(GinkgoT(), db.IpExists(name2))
-
-			db.RegisterMix(mix1)
-
-			assert.True(GinkgoT(), db.IpExists(name1))
-			assert.True(GinkgoT(), db.IpExists(name2))
-		})
-
-		It("works for gateways", func() {
-			ip1 := "1.2.3.4:1789"
-			ip2 := "1.2.3.4:1790"
-
-			db := NewDb(true)
-			gate1 := fixtures.GoodRegisteredGateway()
-			gate1.MixHost = ip1
-
-			assert.False(GinkgoT(), db.IpExists(ip1))
-			assert.False(GinkgoT(), db.IpExists(ip2))
-
-			db.RegisterGateway(gate1)
-
-			assert.True(GinkgoT(), db.IpExists(ip1))
-			assert.True(GinkgoT(), db.IpExists(ip2))
+			assert.Equal(GinkgoT(), active, []string{"aaa", "bbb", "ccc"})
 		})
 	})
 })

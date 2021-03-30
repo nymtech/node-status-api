@@ -16,19 +16,12 @@ package mixmining
 
 import (
 	"net/http"
-	"sync"
 
 	"github.com/didip/tollbooth"
 	"github.com/didip/tollbooth_gin"
 	"github.com/gin-gonic/gin"
 	"github.com/nymtech/node-status-api/models"
 )
-
-const MaximumMixnodes = 1500
-
-// explicitly declared so that a similar attack could not be used for gateways this time.
-const MaximumGateways = 1000
-const SystemVersion = "0.9.2"
 
 // Config for this controller
 type Config struct {
@@ -44,15 +37,6 @@ type controller struct {
 	sanitizer        Sanitizer
 	genericSanitizer GenericSanitizer
 	batchSanitizer   BatchSanitizer
-
-	mixCount     int
-	gatewayCount int
-
-	// ensures that if two nodes register at the same time while there's only a single opening left, they won't
-	// both be accepted.
-	// note that the lock is not used when creating mix status or unregistering nodes as those can only DECREMENT
-	// mix count
-	registrationLock sync.Mutex
 }
 
 // Controller ...
@@ -63,13 +47,7 @@ type Controller interface {
 
 // New returns a new mixmining.Controller
 func New(cfg Config) Controller {
-	initialMixCount := cfg.Service.MixCount()
-	initialGatewayCount := cfg.Service.GatewayCount()
-
-	// move all non 0.9.2 nodes to "removed" set
-	cfg.Service.StartupPurge()
-
-	return &controller{cfg.Service, cfg.Sanitizer, cfg.GenericSanitizer, cfg.BatchSanitizer, initialMixCount, initialGatewayCount, sync.Mutex{}}
+	return &controller{cfg.Service, cfg.Sanitizer, cfg.GenericSanitizer, cfg.BatchSanitizer}
 }
 
 func (controller *controller) RegisterRoutes(router *gin.Engine) {
@@ -131,10 +109,6 @@ func (controller *controller) CreateMixStatus(c *gin.Context) {
 	persisted := controller.service.CreateMixStatus(sanitized)
 	controller.service.SaveStatusReport(persisted)
 
-	// we don't know how number of active nodes changed - update it
-	controller.mixCount = controller.service.MixCount()
-	controller.gatewayCount = controller.service.GatewayCount()
-
 	c.JSON(http.StatusCreated, gin.H{"ok": true})
 }
 
@@ -189,10 +163,6 @@ func (controller *controller) BatchCreateMixStatus(c *gin.Context) {
 
 	persisted := controller.service.BatchCreateMixStatus(sanitized)
 	controller.service.SaveBatchStatusReport(persisted)
-
-	// we don't know how number of active nodes changed - update it
-	controller.mixCount = controller.service.MixCount()
-	controller.gatewayCount = controller.service.GatewayCount()
 
 	c.JSON(http.StatusCreated, gin.H{"ok": true})
 }
