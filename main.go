@@ -15,6 +15,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/microcosm-cc/bluemonday"
@@ -26,7 +27,9 @@ import (
 
 func main() {
 	directory := New()
-	directory.Run(":8081")
+	address := ":8081"
+	fmt.Printf("Starting the process on %v\n", address)
+	directory.Run(address)
 }
 
 // New returns a new node status REST API server
