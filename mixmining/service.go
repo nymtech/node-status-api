@@ -45,11 +45,23 @@ func NewService(db IDb, isTest bool) *Service {
 	}
 
 	if !isTest {
+		// same with 'last day' report updater (every 10min)
+		go lastDayReportsUpdater(service)
 		// and old statuses remover (every 1h)
 		go oldStatusesPurger(service)
 	}
 
 	return service
+}
+
+func lastDayReportsUpdater(service *Service) {
+	ticker := time.NewTicker(time.Minute * 10)
+
+	for {
+		<-ticker.C
+		service.updateLastDayReports()
+	}
+
 }
 
 func oldStatusesPurger(service *Service) {
@@ -61,6 +73,29 @@ func oldStatusesPurger(service *Service) {
 		service.db.RemoveOldStatuses(lastWeek)
 		<-ticker.C
 	}
+}
+
+func (service *Service) updateLastDayReports() models.BatchMixStatusReport {
+	dayAgo := timemock.Now().Add(-time.Hour * 24).UnixNano()
+	allActive := service.db.GetActiveNodes(dayAgo)
+
+	batchReport := service.db.BatchLoadReports(allActive)
+
+	for i := range batchReport.Report {
+		lastDayUptime := service.CalculateUptime(batchReport.Report[i].PubKey, "4", dayAgo)
+		if lastDayUptime == -1 {
+			// there were no reports to calculate uptime with
+			// but this should NEVER happen as we only loaded reports for the nodes that received status data
+			// in last 24h
+			continue
+		}
+
+		batchReport.Report[i].LastDayIPV4 = lastDayUptime
+		batchReport.Report[i].LastDayIPV6 = service.CalculateUptime(batchReport.Report[i].PubKey, "6", dayAgo)
+	}
+
+	service.db.SaveBatchMixStatusReport(batchReport)
+	return batchReport
 }
 
 // CreateMixStatus adds a new PersistedMixStatus in the orm.
@@ -145,12 +180,10 @@ func (service *Service) updateReportUpToLastHour(report *models.MixStatusReport,
 		report.MostRecentIPV4 = *status.Up
 		report.Last5MinutesIPV4 = service.CalculateUptime(status.PubKey, "4", minutesAgo(5))
 		report.LastHourIPV4 = service.CalculateUptime(status.PubKey, "4", minutesAgo(60))
-		report.LastDayIPV4 = service.CalculateUptime(status.PubKey, "4", minutesAgo(24 * 60))
 	} else if status.IPVersion == "6" {
 		report.MostRecentIPV6 = *status.Up
 		report.Last5MinutesIPV6 = service.CalculateUptime(status.PubKey, "6", minutesAgo(5))
 		report.LastHourIPV6 = service.CalculateUptime(status.PubKey, "6", minutesAgo(60))
-		report.LastDayIPV6 = service.CalculateUptime(status.PubKey, "6", minutesAgo(24 * 60))
 	}
 }
 
