@@ -26,6 +26,7 @@ import (
 // achieve that which a bigger gopher could clean up.
 type MixStatus struct {
 	PubKey    string `json:"pubKey" binding:"required" gorm:"index:status_index"`
+	Owner     string `json:"owner" binding:"required" gorm:"index:status_index"`
 	IPVersion string `json:"ipVersion" binding:"required" gorm:"index:status_index"`
 	Up        *bool  `json:"up" binding:"required"`
 }
@@ -41,6 +42,7 @@ type PersistedMixStatus struct {
 // MixStatusReport gives a quick view of mixnode uptime performance
 type MixStatusReport struct {
 	PubKey           string `json:"pubKey" binding:"required" gorm:"primaryKey;unique"`
+	Owner            string `json:"owner" binding:"required" binding:"required"`
 	MostRecentIPV4   bool   `json:"mostRecentIPV4" binding:"required"`
 	Last5MinutesIPV4 int    `json:"last5MinutesIPV4" binding:"required"`
 	LastHourIPV4     int    `json:"lastHourIPV4" binding:"required"`
@@ -59,4 +61,24 @@ type BatchMixStatus struct {
 // BatchMixStatusReport gives a quick view of network uptime performance
 type BatchMixStatusReport struct {
 	Report []MixStatusReport `json:"report" binding:"required"`
+}
+
+func (report *BatchMixStatusReport) SplitToChunks(chunkSize int) []BatchMixStatusReport {
+	reportDataCopy := make([]MixStatusReport, len(report.Report))
+	copy(reportDataCopy, report.Report)
+
+	var chunks [][]MixStatusReport
+	for chunkSize < len(reportDataCopy) {
+		reportDataCopy, chunks = reportDataCopy[chunkSize:], append(chunks, reportDataCopy[0:chunkSize:chunkSize])
+	}
+
+	chunks = append(chunks, reportDataCopy)
+
+
+	newReports := make([]BatchMixStatusReport, len(chunks))
+	for i, chunk := range chunks {
+		newReports[i] = BatchMixStatusReport{Report: chunk}
+	}
+
+	return newReports
 }

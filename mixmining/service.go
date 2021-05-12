@@ -21,6 +21,9 @@ import (
 	"github.com/nymtech/node-status-api/models"
 )
 
+const MaxReportSize = 2000
+const MaxStatusesPerInsertion = 3000
+
 // Service struct
 type Service struct {
 	db     IDb
@@ -119,6 +122,19 @@ func (service *Service) GetStatusReport(pubkey string) models.MixStatusReport {
 	return service.db.LoadReport(pubkey)
 }
 
+// If only there was some *GENERIC* way to not repeat this code...
+func splitPersistedMixStatuses(statusList []models.PersistedMixStatus, chunkSize int) [][]models.PersistedMixStatus {
+	dataCopy := make([]models.PersistedMixStatus, len(statusList))
+	copy(dataCopy, statusList)
+
+	var chunks [][]models.PersistedMixStatus
+	for chunkSize < len(dataCopy) {
+		dataCopy, chunks = dataCopy[chunkSize:], append(chunks, dataCopy[0:chunkSize:chunkSize])
+	}
+
+	return append(chunks, dataCopy)
+}
+
 // BatchCreateMixStatus batch adds new multiple PersistedMixStatus in the orm.
 func (service *Service) BatchCreateMixStatus(batchMixStatus models.BatchMixStatus) []models.PersistedMixStatus {
 	statusList := make([]models.PersistedMixStatus, len(batchMixStatus.Status))
@@ -129,7 +145,17 @@ func (service *Service) BatchCreateMixStatus(batchMixStatus models.BatchMixStatu
 		}
 		statusList[i] = persistedMixStatus
 	}
-	service.db.BatchAddMixStatus(statusList)
+
+	// with statuses > 7000 statuses I was getting `save error: too many SQL variables[GIN]` error so I had to split
+	// the create operation
+	if len(statusList) < MaxStatusesPerInsertion {
+		service.db.BatchAddMixStatus(statusList)
+	} else {
+		chunks := splitPersistedMixStatuses(statusList, MaxStatusesPerInsertion)
+		for _, chunk := range chunks {
+			service.db.BatchAddMixStatus(chunk)
+		}
+	}
 
 	return statusList
 }
@@ -168,14 +194,25 @@ func (service *Service) SaveBatchStatusReport(status []models.PersistedMixStatus
 		}
 	}
 
-	service.db.SaveBatchMixStatusReport(batchReport)
+	// with statuses of > 3500 nodes I was getting `save error: too many SQL variables[GIN]` error so I had to split
+	// the save operation
+
+	if len(batchReport.Report) < MaxReportSize {
+		service.db.SaveBatchMixStatusReport(batchReport)
+	} else {
+		chunks := batchReport.SplitToChunks(MaxReportSize)
+		for _, chunk := range chunks {
+			service.db.SaveBatchMixStatusReport(chunk)
+		}
+	}
 
 	return batchReport
 }
 
 func (service *Service) updateReportUpToLastHour(report *models.MixStatusReport, status *models.PersistedMixStatus) {
 	report.PubKey = status.PubKey // crude, we do this in case it's a fresh struct returned from the db
-
+	report.Owner = status.Owner
+	
 	if status.IPVersion == "4" {
 		report.MostRecentIPV4 = *status.Up
 		report.Last5MinutesIPV4 = service.CalculateUptime(status.PubKey, "4", minutesAgo(5))

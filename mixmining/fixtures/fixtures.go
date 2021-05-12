@@ -21,6 +21,7 @@ func MixStatusesList() []models.PersistedMixStatus {
 	booltrue := true
 	m1 := models.PersistedMixStatus{
 		MixStatus: models.MixStatus{
+			Owner:     "owner",
 			IPVersion: "6",
 			PubKey:    "pubkey1",
 			Up:        &booltrue,
@@ -30,6 +31,7 @@ func MixStatusesList() []models.PersistedMixStatus {
 
 	m2 := models.PersistedMixStatus{
 		MixStatus: models.MixStatus{
+			Owner:     "owner",
 			IPVersion: "6",
 			PubKey:    "pubkey1",
 			Up:        &booltrue,
@@ -45,6 +47,7 @@ func MixStatusesList() []models.PersistedMixStatus {
 func XSSMixStatus() models.MixStatus {
 	booltrue := true
 	xss := models.MixStatus{
+		Owner:     "owner",
 		IPVersion: "6",
 		PubKey:    "pubkey2<script>alert('gotcha')</script>",
 		Up:        &booltrue,
@@ -56,6 +59,7 @@ func XSSMixStatus() models.MixStatus {
 func GoodMixStatus() models.MixStatus {
 	booltrue := true
 	return models.MixStatus{
+		Owner:     "owner",
 		IPVersion: "6",
 		PubKey:    "pubkey2",
 		Up:        &booltrue,
@@ -68,16 +72,19 @@ func XSSBatchMixStatus() models.BatchMixStatus {
 	xss := models.BatchMixStatus{
 		Status: []models.MixStatus{
 			{
+				Owner:     "owner1",
 				IPVersion: "6",
 				PubKey:    "pubkey2<script>alert('gotcha')</script>",
 				Up:        &booltrue,
 			},
 			{
+				Owner:     "owner2",
 				IPVersion: "4",
 				PubKey:    "pubkey2<script>alert('gotcha')</script>",
 				Up:        &booltrue,
 			},
 			{
+				Owner:     "owner3",
 				IPVersion: "6",
 				PubKey:    "pubkey3<script>alert('gotcha')</script>",
 				Up:        &booltrue,
@@ -93,16 +100,19 @@ func GoodBatchMixStatus() models.BatchMixStatus {
 	return models.BatchMixStatus{
 		Status: []models.MixStatus{
 			{
+				Owner:     "owner1",
 				IPVersion: "6",
 				PubKey:    "pubkey2",
 				Up:        &booltrue,
 			},
 			{
+				Owner:     "owner2",
 				IPVersion: "4",
 				PubKey:    "pubkey2",
 				Up:        &booltrue,
 			},
 			{
+				Owner:     "owner3",
 				IPVersion: "6",
 				PubKey:    "pubkey3",
 				Up:        &booltrue,
