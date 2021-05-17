@@ -43,6 +43,9 @@ type IDb interface {
 	GetActiveNodes(since int64) []string
 }
 
+const MaxReportSize = 2000
+const MaxStatusesPerInsertion = 3000
+
 // Db is a hashtable that holds mixnode uptime mixmining
 type Db struct {
 	orm *gorm.DB
@@ -96,9 +99,26 @@ func (db *Db) AddMixStatus(status models.PersistedMixStatus) {
 	db.orm.Create(status)
 }
 
+// If only there was some *GENERIC* way to not repeat this code...
+func splitPersistedMixStatuses(statusList []models.PersistedMixStatus, chunkSize int) [][]models.PersistedMixStatus {
+	dataCopy := make([]models.PersistedMixStatus, len(statusList))
+	copy(dataCopy, statusList)
+
+	var chunks [][]models.PersistedMixStatus
+	for chunkSize < len(dataCopy) {
+		dataCopy, chunks = dataCopy[chunkSize:], append(chunks, dataCopy[0:chunkSize:chunkSize])
+	}
+
+	return append(chunks, dataCopy)
+}
+
 // BatchAdd saves multiple PersistedMixStatus
 func (db *Db) BatchAddMixStatus(status []models.PersistedMixStatus) {
-	db.orm.Create(status)
+	// with statuses > 7000 statuses I was getting `save error: too many SQL variables[GIN]` error so I had to split
+	// the create operation
+	for _, statusChunk := range splitPersistedMixStatuses(status, MaxStatusesPerInsertion) {
+		db.orm.Create(statusChunk)
+	}
 }
 
 // List returns all models.PersistedMixStatus in the orm
@@ -145,10 +165,23 @@ func (db *Db) SaveMixStatusReport(report models.MixStatusReport) {
 	}
 }
 
-// SaveBatchMixStatusReport creates or updates a status summary report for multiple mixnodex in the database
+// SaveBatchMixStatusReport creates or updates a status summary report for multiple mixnodes in the database
 func (db *Db) SaveBatchMixStatusReport(report models.BatchMixStatusReport) {
-	if result := db.orm.Save(report.Report); result.Error != nil {
-		fmt.Printf("Batch Mix status report save error: %+v", result.Error)
+	// with statuses of > 3500 nodes I was getting `save error: too many SQL variables[GIN]` error so I had to split
+	// the save operation
+	save := func (db *Db, report models.BatchMixStatusReport) {
+		if result := db.orm.Save(report.Report); result.Error != nil {
+			fmt.Printf("Batch Mix status report save error: %+v", result.Error)
+		}
+	}
+
+	if len(report.Report) < MaxReportSize {
+		save(db, report)
+	} else {
+		chunks := report.SplitToChunks(MaxReportSize)
+		for _, reportChunk := range chunks {
+			save(db, reportChunk)
+		}
 	}
 }
 
