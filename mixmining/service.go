@@ -60,7 +60,7 @@ func lastDayReportsUpdater(service *Service) {
 
 	for {
 		<-ticker.C
-		fmt.Println("Ppdating last day reports")
+		fmt.Println("Updating last day reports")
 		service.updateLastDayReports()
 	}
 
