@@ -12,9 +12,19 @@ type IDb struct {
 	mock.Mock
 }
 
+// AddGatewayStatus provides a mock function with given fields: _a0
+func (_m *IDb) AddGatewayStatus(_a0 models.PersistedGatewayStatus) {
+	_m.Called(_a0)
+}
+
 // AddMixStatus provides a mock function with given fields: _a0
 func (_m *IDb) AddMixStatus(_a0 models.PersistedMixStatus) {
 	_m.Called(_a0)
+}
+
+// BatchAddGatewayStatus provides a mock function with given fields: status
+func (_m *IDb) BatchAddGatewayStatus(status []models.PersistedGatewayStatus) {
+	_m.Called(status)
 }
 
 // BatchAddMixStatus provides a mock function with given fields: status
@@ -22,8 +32,22 @@ func (_m *IDb) BatchAddMixStatus(status []models.PersistedMixStatus) {
 	_m.Called(status)
 }
 
-// BatchLoadReports provides a mock function with given fields: pubkeys
-func (_m *IDb) BatchLoadReports(pubkeys []string) models.BatchMixStatusReport {
+// BatchLoadGatewayReports provides a mock function with given fields: pubkeys
+func (_m *IDb) BatchLoadGatewayReports(pubkeys []string) models.BatchGatewayStatusReport {
+	ret := _m.Called(pubkeys)
+
+	var r0 models.BatchGatewayStatusReport
+	if rf, ok := ret.Get(0).(func([]string) models.BatchGatewayStatusReport); ok {
+		r0 = rf(pubkeys)
+	} else {
+		r0 = ret.Get(0).(models.BatchGatewayStatusReport)
+	}
+
+	return r0
+}
+
+// BatchLoadMixReports provides a mock function with given fields: pubkeys
+func (_m *IDb) BatchLoadMixReports(pubkeys []string) models.BatchMixStatusReport {
 	ret := _m.Called(pubkeys)
 
 	var r0 models.BatchMixStatusReport
@@ -36,8 +60,8 @@ func (_m *IDb) BatchLoadReports(pubkeys []string) models.BatchMixStatusReport {
 	return r0
 }
 
-// GetActiveNodes provides a mock function with given fields: since
-func (_m *IDb) GetActiveNodes(since int64) []string {
+// GetActiveGateways provides a mock function with given fields: since
+func (_m *IDb) GetActiveGateways(since int64) []string {
 	ret := _m.Called(since)
 
 	var r0 []string
@@ -46,6 +70,70 @@ func (_m *IDb) GetActiveNodes(since int64) []string {
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]string)
+		}
+	}
+
+	return r0
+}
+
+// GetActiveMixes provides a mock function with given fields: since
+func (_m *IDb) GetActiveMixes(since int64) []string {
+	ret := _m.Called(since)
+
+	var r0 []string
+	if rf, ok := ret.Get(0).(func(int64) []string); ok {
+		r0 = rf(since)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]string)
+		}
+	}
+
+	return r0
+}
+
+// ListGatewayStatus provides a mock function with given fields: pubkey, limit
+func (_m *IDb) ListGatewayStatus(pubkey string, limit int) []models.PersistedGatewayStatus {
+	ret := _m.Called(pubkey, limit)
+
+	var r0 []models.PersistedGatewayStatus
+	if rf, ok := ret.Get(0).(func(string, int) []models.PersistedGatewayStatus); ok {
+		r0 = rf(pubkey, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.PersistedGatewayStatus)
+		}
+	}
+
+	return r0
+}
+
+// ListGatewayStatusDateRange provides a mock function with given fields: pubkey, ipVersion, start, end
+func (_m *IDb) ListGatewayStatusDateRange(pubkey string, ipVersion string, start int64, end int64) []models.PersistedGatewayStatus {
+	ret := _m.Called(pubkey, ipVersion, start, end)
+
+	var r0 []models.PersistedGatewayStatus
+	if rf, ok := ret.Get(0).(func(string, string, int64, int64) []models.PersistedGatewayStatus); ok {
+		r0 = rf(pubkey, ipVersion, start, end)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.PersistedGatewayStatus)
+		}
+	}
+
+	return r0
+}
+
+// ListGatewayStatusSince provides a mock function with given fields: pubkey, ipVersion, since
+func (_m *IDb) ListGatewayStatusSince(pubkey string, ipVersion string, since int64) []models.PersistedGatewayStatus {
+	ret := _m.Called(pubkey, ipVersion, since)
+
+	var r0 []models.PersistedGatewayStatus
+	if rf, ok := ret.Get(0).(func(string, string, int64) []models.PersistedGatewayStatus); ok {
+		r0 = rf(pubkey, ipVersion, since)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.PersistedGatewayStatus)
 		}
 	}
 
@@ -100,22 +188,22 @@ func (_m *IDb) ListMixStatusSince(pubkey string, ipVersion string, since int64) 
 	return r0
 }
 
-// LoadNonStaleReports provides a mock function with given fields:
-func (_m *IDb) LoadNonStaleReports() models.BatchMixStatusReport {
-	ret := _m.Called()
+// LoadGatewayReport provides a mock function with given fields: pubkey
+func (_m *IDb) LoadGatewayReport(pubkey string) models.GatewayStatusReport {
+	ret := _m.Called(pubkey)
 
-	var r0 models.BatchMixStatusReport
-	if rf, ok := ret.Get(0).(func() models.BatchMixStatusReport); ok {
-		r0 = rf()
+	var r0 models.GatewayStatusReport
+	if rf, ok := ret.Get(0).(func(string) models.GatewayStatusReport); ok {
+		r0 = rf(pubkey)
 	} else {
-		r0 = ret.Get(0).(models.BatchMixStatusReport)
+		r0 = ret.Get(0).(models.GatewayStatusReport)
 	}
 
 	return r0
 }
 
-// LoadReport provides a mock function with given fields: pubkey
-func (_m *IDb) LoadReport(pubkey string) models.MixStatusReport {
+// LoadMixReport provides a mock function with given fields: pubkey
+func (_m *IDb) LoadMixReport(pubkey string) models.MixStatusReport {
 	ret := _m.Called(pubkey)
 
 	var r0 models.MixStatusReport
@@ -128,13 +216,56 @@ func (_m *IDb) LoadReport(pubkey string) models.MixStatusReport {
 	return r0
 }
 
-// RemoveOldStatuses provides a mock function with given fields: before
-func (_m *IDb) RemoveOldStatuses(before int64) {
+// LoadNonStaleGatewayReports provides a mock function with given fields:
+func (_m *IDb) LoadNonStaleGatewayReports() models.BatchGatewayStatusReport {
+	ret := _m.Called()
+
+	var r0 models.BatchGatewayStatusReport
+	if rf, ok := ret.Get(0).(func() models.BatchGatewayStatusReport); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(models.BatchGatewayStatusReport)
+	}
+
+	return r0
+}
+
+// LoadNonStaleMixReports provides a mock function with given fields:
+func (_m *IDb) LoadNonStaleMixReports() models.BatchMixStatusReport {
+	ret := _m.Called()
+
+	var r0 models.BatchMixStatusReport
+	if rf, ok := ret.Get(0).(func() models.BatchMixStatusReport); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(models.BatchMixStatusReport)
+	}
+
+	return r0
+}
+
+// RemoveOldGatewayStatuses provides a mock function with given fields: before
+func (_m *IDb) RemoveOldGatewayStatuses(before int64) {
 	_m.Called(before)
+}
+
+// RemoveOldMixStatuses provides a mock function with given fields: before
+func (_m *IDb) RemoveOldMixStatuses(before int64) {
+	_m.Called(before)
+}
+
+// SaveBatchGatewayStatusReport provides a mock function with given fields: _a0
+func (_m *IDb) SaveBatchGatewayStatusReport(_a0 models.BatchGatewayStatusReport) {
+	_m.Called(_a0)
 }
 
 // SaveBatchMixStatusReport provides a mock function with given fields: _a0
 func (_m *IDb) SaveBatchMixStatusReport(_a0 models.BatchMixStatusReport) {
+	_m.Called(_a0)
+}
+
+// SaveGatewayStatusReport provides a mock function with given fields: _a0
+func (_m *IDb) SaveGatewayStatusReport(_a0 models.GatewayStatusReport) {
 	_m.Called(_a0)
 }
 

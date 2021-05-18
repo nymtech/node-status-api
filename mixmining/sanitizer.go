@@ -32,7 +32,7 @@ type genericSanitizer struct {
 	policy *bluemonday.Policy
 }
 
-// NewSanitizer returns a new input sanitizer for all presence-related things
+// NewMixStatusSanitizer returns a new input mixStatusSanitizer for all presence-related things
 func NewGenericSanitizer(policy *bluemonday.Policy) GenericSanitizer {
 	return genericSanitizer{
 		policy: policy,
@@ -78,53 +78,80 @@ func (s genericSanitizer) Sanitize(input interface{}) {
 
 }
 
-// BatchSanitizer sanitizes untrusted batch mixmining data. It should be used in
+// BatchMixSanitizer sanitizes untrusted batch mixmining data. It should be used in
 // controllers to wipe out any questionable input at our application's front
 // door.
-type BatchSanitizer interface {
+type BatchMixSanitizer interface {
 	Sanitize(input models.BatchMixStatus) models.BatchMixStatus
 }
 
-type batchSanitizer struct {
-	sanitizer sanitizer
+type batchMixSanitizer struct {
+	sanitizer mixStatusSanitizer
 }
 
-// NewBatchSanitizer returns a new input sanitizer for metrics
-func NewBatchSanitizer(policy *bluemonday.Policy) BatchSanitizer {
-	return batchSanitizer{
-		sanitizer: sanitizer{
+// NewBatchMixSanitizer returns a new input mixStatusSanitizer for metrics
+func NewBatchMixSanitizer(policy *bluemonday.Policy) BatchMixSanitizer {
+	return batchMixSanitizer{
+		sanitizer: mixStatusSanitizer{
 			policy: policy,
 		},
 	}
 }
 
-func (s batchSanitizer) Sanitize(input models.BatchMixStatus) models.BatchMixStatus {
+func (s batchMixSanitizer) Sanitize(input models.BatchMixStatus) models.BatchMixStatus {
 	for i := range input.Status {
 		input.Status[i] = s.sanitizer.Sanitize(input.Status[i])
 	}
 	return input
 }
 
-// Sanitizer sanitizes untrusted mixmining data. It should be used in
+// BatchGatewaySanitizer sanitizes untrusted batch mixmining data. It should be used in
 // controllers to wipe out any questionable input at our application's front
 // door.
-type Sanitizer interface {
+type BatchGatewaySanitizer interface {
+	Sanitize(input models.BatchGatewayStatus) models.BatchGatewayStatus
+}
+
+type batchGatewaySanitizer struct {
+	sanitizer gatewayStatusSanitizer
+}
+
+// NewBatchGatewaySanitizer returns a new input mixStatusSanitizer for metrics
+func NewBatchGatewaySanitizer(policy *bluemonday.Policy) BatchGatewaySanitizer {
+	return batchGatewaySanitizer{
+		sanitizer: gatewayStatusSanitizer{
+			policy: policy,
+		},
+	}
+}
+
+func (s batchGatewaySanitizer) Sanitize(input models.BatchGatewayStatus) models.BatchGatewayStatus {
+	for i := range input.Status {
+		input.Status[i] = s.sanitizer.Sanitize(input.Status[i])
+	}
+	return input
+}
+
+// MixStatusSanitizer sanitizes untrusted mixmining data. It should be used in
+// controllers to wipe out any questionable input at our application's front
+// door.
+type MixStatusSanitizer interface {
 	Sanitize(input models.MixStatus) models.MixStatus
 }
 
-type sanitizer struct {
+type mixStatusSanitizer struct {
 	policy *bluemonday.Policy
 }
 
-// NewSanitizer returns a new input sanitizer for metrics
-func NewSanitizer(policy *bluemonday.Policy) Sanitizer {
-	return sanitizer{
+// NewMixStatusSanitizer returns a new input mixStatusSanitizer for metrics
+func NewMixStatusSanitizer(policy *bluemonday.Policy) MixStatusSanitizer {
+	return mixStatusSanitizer{
 		policy: policy,
 	}
 }
 
-func (s sanitizer) Sanitize(input models.MixStatus) models.MixStatus {
-	sanitized := newMeasurement()
+func (s mixStatusSanitizer) Sanitize(input models.MixStatus) models.MixStatus {
+	sanitized := newMixMeasurement()
 
 	sanitized.PubKey = s.policy.Sanitize(input.PubKey)
 	sanitized.Owner = s.policy.Sanitize(input.Owner)
@@ -133,9 +160,48 @@ func (s sanitizer) Sanitize(input models.MixStatus) models.MixStatus {
 	return sanitized
 }
 
-func newMeasurement() models.MixStatus {
+func newMixMeasurement() models.MixStatus {
 	booltrue := true
 	return models.MixStatus{
+		PubKey:    "",
+		Owner: "",
+		IPVersion: "",
+		Up:        &booltrue,
+	}
+}
+
+
+// GatewayStatusSanitizer sanitizes untrusted mixmining data. It should be used in
+// controllers to wipe out any questionable input at our application's front
+// door.
+type GatewayStatusSanitizer interface {
+	Sanitize(input models.GatewayStatus) models.GatewayStatus
+}
+
+type gatewayStatusSanitizer struct {
+	policy *bluemonday.Policy
+}
+
+// NewGatewayStatusSanitizer returns a new input mixStatusSanitizer for metrics
+func NewGatewayStatusSanitizer(policy *bluemonday.Policy) GatewayStatusSanitizer {
+	return gatewayStatusSanitizer{
+		policy: policy,
+	}
+}
+
+func (s gatewayStatusSanitizer) Sanitize(input models.GatewayStatus) models.GatewayStatus {
+	sanitized := newGatewayMeasurement()
+
+	sanitized.PubKey = s.policy.Sanitize(input.PubKey)
+	sanitized.Owner = s.policy.Sanitize(input.Owner)
+	sanitized.IPVersion = s.policy.Sanitize(input.IPVersion)
+	sanitized.Up = input.Up
+	return sanitized
+}
+
+func newGatewayMeasurement() models.GatewayStatus {
+	booltrue := true
+	return models.GatewayStatus{
 		PubKey:    "",
 		Owner: "",
 		IPVersion: "",

@@ -21,12 +21,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var _ = Describe("Sanitizer", func() {
+var _ = Describe("MixStatusSanitizer", func() {
 	Describe("sanitizing inputs", func() {
 		Context("when XSS is present", func() {
 			It("sanitizes input", func() {
 				policy := bluemonday.UGCPolicy()
-				sanitizer := NewSanitizer(policy)
+				sanitizer := NewMixStatusSanitizer(policy)
 				result := sanitizer.Sanitize(xssStatus())
 				assert.Equal(GinkgoT(), goodMetric(), result)
 			})
@@ -34,7 +34,7 @@ var _ = Describe("Sanitizer", func() {
 		Context("when XSS is not present", func() {
 			It("doesn't change input", func() {
 				policy := bluemonday.UGCPolicy()
-				sanitizer := NewSanitizer(policy)
+				sanitizer := NewMixStatusSanitizer(policy)
 				result := sanitizer.Sanitize(goodMetric())
 				assert.Equal(GinkgoT(), goodMetric(), result)
 			})

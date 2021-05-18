@@ -29,7 +29,85 @@ var doc = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/api/mixmining": {
+        "/api/status/fullgatewayreport": {
+            "get": {
+                "description": "Provides summary uptime statistics for last 5 minutes, day, week, and month",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "status"
+                ],
+                "summary": "Retrieves a summary report of historical gateway status",
+                "operationId": "batchGetGatewayStatusReport",
+                "responses": {
+                    "200": {
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/models.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/models.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/status/fullmixreport": {
+            "get": {
+                "description": "Provides summary uptime statistics for last 5 minutes, day, week, and month",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "status"
+                ],
+                "summary": "Retrieves a summary report of historical mix status",
+                "operationId": "batchGetMixStatusReport",
+                "responses": {
+                    "200": {
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/models.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/models.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/status/gateway": {
             "post": {
                 "description": "Nym network monitor sends packets through the system and checks if they make it. The network monitor then hits this method to report whether the node was up at a given time.",
                 "consumes": [
@@ -39,7 +117,221 @@ var doc = `{
                     "application/json"
                 ],
                 "tags": [
-                    "mixmining"
+                    "status"
+                ],
+                "summary": "Lets the network monitor create a new uptime status for a gateway",
+                "operationId": "addGatewayStatus",
+                "parameters": [
+                    {
+                        "description": "object",
+                        "name": "object",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.GatewayStatus"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.Error"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/models.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/models.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/models.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/status/gateway/batch": {
+            "post": {
+                "description": "Nym network monitor sends packets through the system and checks if they make it. The network monitor then hits this method to report whether nodes were up at a given time.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "status"
+                ],
+                "summary": "Lets the network monitor create a new uptime status for multiple gateways",
+                "operationId": "batchCreateGatewayStatus",
+                "parameters": [
+                    {
+                        "description": "object",
+                        "name": "object",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.BatchGatewayStatus"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.Error"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/models.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/models.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/models.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/status/gateway/{pubkey}/history": {
+            "get": {
+                "description": "Lists all gateway statuses for a given node pubkey",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "status"
+                ],
+                "summary": "Lists mixnode activity",
+                "operationId": "listGatewayStatuses",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Gateway Pubkey",
+                        "name": "pubkey",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.GatewayStatus"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/models.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/models.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/status/gateway/{pubkey}/report": {
+            "get": {
+                "description": "Provides summary uptime statistics for last 5 minutes, day, week, and month",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "status"
+                ],
+                "summary": "Retrieves a summary report of historical gateway status",
+                "operationId": "getGatewayStatusReport",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Gateway Pubkey",
+                        "name": "pubkey",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/models.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/models.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/models.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/status/mixnode": {
+            "post": {
+                "description": "Nym network monitor sends packets through the system and checks if they make it. The network monitor then hits this method to report whether the node was up at a given time.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "status"
                 ],
                 "summary": "Lets the network monitor create a new uptime status for a mix",
                 "operationId": "addMixStatus",
@@ -55,7 +347,9 @@ var doc = `{
                     }
                 ],
                 "responses": {
-                    "201": {},
+                    "201": {
+                        "description": ""
+                    },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
@@ -83,7 +377,7 @@ var doc = `{
                 }
             }
         },
-        "/api/mixmining/batch": {
+        "/api/status/mixnode/batch": {
             "post": {
                 "description": "Nym network monitor sends packets through the system and checks if they make it. The network monitor then hits this method to report whether nodes were up at a given time.",
                 "consumes": [
@@ -93,7 +387,7 @@ var doc = `{
                     "application/json"
                 ],
                 "tags": [
-                    "mixmining"
+                    "status"
                 ],
                 "summary": "Lets the network monitor create a new uptime status for multiple mixes",
                 "operationId": "batchCreateMixStatus",
@@ -109,7 +403,9 @@ var doc = `{
                     }
                 ],
                 "responses": {
-                    "201": {},
+                    "201": {
+                        "description": ""
+                    },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
@@ -137,44 +433,7 @@ var doc = `{
                 }
             }
         },
-        "/api/mixmining/fullreport": {
-            "get": {
-                "description": "Provides summary uptime statistics for last 5 minutes, day, week, and month",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "mixmining"
-                ],
-                "summary": "Retrieves a summary report of historical mix status",
-                "operationId": "batchGetMixStatusReport",
-                "responses": {
-                    "200": {},
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/models.Error"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/models.Error"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/models.Error"
-                        }
-                    }
-                }
-            }
-        },
-        "/api/mixmining/node/{pubkey}/history": {
+        "/api/status/mixnode/{pubkey}/history": {
             "get": {
                 "description": "Lists all mixnode statuses for a given node pubkey",
                 "consumes": [
@@ -184,7 +443,7 @@ var doc = `{
                     "application/json"
                 ],
                 "tags": [
-                    "mixmining"
+                    "status"
                 ],
                 "summary": "Lists mixnode activity",
                 "operationId": "listMixStatuses",
@@ -228,7 +487,7 @@ var doc = `{
                 }
             }
         },
-        "/api/mixmining/node/{pubkey}/report": {
+        "/api/status/mixnode/{pubkey}/report": {
             "get": {
                 "description": "Provides summary uptime statistics for last 5 minutes, day, week, and month",
                 "consumes": [
@@ -238,7 +497,7 @@ var doc = `{
                     "application/json"
                 ],
                 "tags": [
-                    "mixmining"
+                    "status"
                 ],
                 "summary": "Retrieves a summary report of historical mix status",
                 "operationId": "getMixStatusReport",
@@ -252,7 +511,9 @@ var doc = `{
                     }
                 ],
                 "responses": {
-                    "200": {},
+                    "200": {
+                        "description": ""
+                    },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
@@ -276,6 +537,20 @@ var doc = `{
         }
     },
     "definitions": {
+        "models.BatchGatewayStatus": {
+            "type": "object",
+            "required": [
+                "status"
+            ],
+            "properties": {
+                "status": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.GatewayStatus"
+                    }
+                }
+            }
+        },
         "models.BatchMixStatus": {
             "type": "object",
             "required": [
@@ -298,15 +573,42 @@ var doc = `{
                 }
             }
         },
-        "models.MixStatus": {
+        "models.GatewayStatus": {
             "type": "object",
             "required": [
                 "ipVersion",
+                "owner",
                 "pubKey",
                 "up"
             ],
             "properties": {
                 "ipVersion": {
+                    "type": "string"
+                },
+                "owner": {
+                    "type": "string"
+                },
+                "pubKey": {
+                    "type": "string"
+                },
+                "up": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "models.MixStatus": {
+            "type": "object",
+            "required": [
+                "ipVersion",
+                "owner",
+                "pubKey",
+                "up"
+            ],
+            "properties": {
+                "ipVersion": {
+                    "type": "string"
+                },
+                "owner": {
                     "type": "string"
                 },
                 "pubKey": {

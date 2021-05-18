@@ -1,4 +1,13 @@
 definitions:
+  models.BatchGatewayStatus:
+    properties:
+      status:
+        items:
+          $ref: '#/definitions/models.GatewayStatus'
+        type: array
+    required:
+    - status
+    type: object
   models.BatchMixStatus:
     properties:
       status:
@@ -13,9 +22,11 @@ definitions:
       error:
         type: string
     type: object
-  models.MixStatus:
+  models.GatewayStatus:
     properties:
       ipVersion:
+        type: string
+      owner:
         type: string
       pubKey:
         type: string
@@ -23,6 +34,23 @@ definitions:
         type: boolean
     required:
     - ipVersion
+    - owner
+    - pubKey
+    - up
+    type: object
+  models.MixStatus:
+    properties:
+      ipVersion:
+        type: string
+      owner:
+        type: string
+      pubKey:
+        type: string
+      up:
+        type: boolean
+    required:
+    - ipVersion
+    - owner
     - pubKey
     - up
     type: object
@@ -36,11 +64,214 @@ info:
   title: Nym Node Status API
   version: 0.10.0
 paths:
-  /api/mixmining:
+  /api/status/fullgatewayreport:
+    get:
+      consumes:
+      - application/json
+      description: Provides summary uptime statistics for last 5 minutes, day, week,
+        and month
+      operationId: batchGetGatewayStatusReport
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ""
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Error'
+      summary: Retrieves a summary report of historical gateway status
+      tags:
+      - status
+  /api/status/fullmixreport:
+    get:
+      consumes:
+      - application/json
+      description: Provides summary uptime statistics for last 5 minutes, day, week,
+        and month
+      operationId: batchGetMixStatusReport
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ""
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Error'
+      summary: Retrieves a summary report of historical mix status
+      tags:
+      - status
+  /api/status/gateway:
     post:
       consumes:
       - application/json
-      description: Nym network monitor sends packets through the system and checks if they make it. The network monitor then hits this method to report whether the node was up at a given time.
+      description: Nym network monitor sends packets through the system and checks
+        if they make it. The network monitor then hits this method to report whether
+        the node was up at a given time.
+      operationId: addGatewayStatus
+      parameters:
+      - description: object
+        in: body
+        name: object
+        required: true
+        schema:
+          $ref: '#/definitions/models.GatewayStatus'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: ""
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Error'
+      summary: Lets the network monitor create a new uptime status for a gateway
+      tags:
+      - status
+  /api/status/gateway/{pubkey}/history:
+    get:
+      consumes:
+      - application/json
+      description: Lists all gateway statuses for a given node pubkey
+      operationId: listGatewayStatuses
+      parameters:
+      - description: Gateway Pubkey
+        in: path
+        name: pubkey
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.GatewayStatus'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Error'
+      summary: Lists mixnode activity
+      tags:
+      - status
+  /api/status/gateway/{pubkey}/report:
+    get:
+      consumes:
+      - application/json
+      description: Provides summary uptime statistics for last 5 minutes, day, week,
+        and month
+      operationId: getGatewayStatusReport
+      parameters:
+      - description: Gateway Pubkey
+        in: path
+        name: pubkey
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ""
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Error'
+      summary: Retrieves a summary report of historical gateway status
+      tags:
+      - status
+  /api/status/gateway/batch:
+    post:
+      consumes:
+      - application/json
+      description: Nym network monitor sends packets through the system and checks
+        if they make it. The network monitor then hits this method to report whether
+        nodes were up at a given time.
+      operationId: batchCreateGatewayStatus
+      parameters:
+      - description: object
+        in: body
+        name: object
+        required: true
+        schema:
+          $ref: '#/definitions/models.BatchGatewayStatus'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: ""
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Error'
+      summary: Lets the network monitor create a new uptime status for multiple gateways
+      tags:
+      - status
+  /api/status/mixnode:
+    post:
+      consumes:
+      - application/json
+      description: Nym network monitor sends packets through the system and checks
+        if they make it. The network monitor then hits this method to report whether
+        the node was up at a given time.
       operationId: addMixStatus
       parameters:
       - description: object
@@ -52,7 +283,8 @@ paths:
       produces:
       - application/json
       responses:
-        "201": {}
+        "201":
+          description: ""
         "400":
           description: Bad Request
           schema:
@@ -71,69 +303,8 @@ paths:
             $ref: '#/definitions/models.Error'
       summary: Lets the network monitor create a new uptime status for a mix
       tags:
-      - mixmining
-  /api/mixmining/batch:
-    post:
-      consumes:
-      - application/json
-      description: Nym network monitor sends packets through the system and checks if they make it. The network monitor then hits this method to report whether nodes were up at a given time.
-      operationId: batchCreateMixStatus
-      parameters:
-      - description: object
-        in: body
-        name: object
-        required: true
-        schema:
-          $ref: '#/definitions/models.BatchMixStatus'
-      produces:
-      - application/json
-      responses:
-        "201": {}
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/models.Error'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/models.Error'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/models.Error'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/models.Error'
-      summary: Lets the network monitor create a new uptime status for multiple mixes
-      tags:
-      - mixmining
-  /api/mixmining/fullreport:
-    get:
-      consumes:
-      - application/json
-      description: Provides summary uptime statistics for last 5 minutes, day, week, and month
-      operationId: batchGetMixStatusReport
-      produces:
-      - application/json
-      responses:
-        "200": {}
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/models.Error'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/models.Error'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/models.Error'
-      summary: Retrieves a summary report of historical mix status
-      tags:
-      - mixmining
-  /api/mixmining/node/{pubkey}/history:
+      - status
+  /api/status/mixnode/{pubkey}/history:
     get:
       consumes:
       - application/json
@@ -168,12 +339,13 @@ paths:
             $ref: '#/definitions/models.Error'
       summary: Lists mixnode activity
       tags:
-      - mixmining
-  /api/mixmining/node/{pubkey}/report:
+      - status
+  /api/status/mixnode/{pubkey}/report:
     get:
       consumes:
       - application/json
-      description: Provides summary uptime statistics for last 5 minutes, day, week, and month
+      description: Provides summary uptime statistics for last 5 minutes, day, week,
+        and month
       operationId: getMixStatusReport
       parameters:
       - description: Mixnode Pubkey
@@ -184,7 +356,8 @@ paths:
       produces:
       - application/json
       responses:
-        "200": {}
+        "200":
+          description: ""
         "400":
           description: Bad Request
           schema:
@@ -199,5 +372,44 @@ paths:
             $ref: '#/definitions/models.Error'
       summary: Retrieves a summary report of historical mix status
       tags:
-      - mixmining
+      - status
+  /api/status/mixnode/batch:
+    post:
+      consumes:
+      - application/json
+      description: Nym network monitor sends packets through the system and checks
+        if they make it. The network monitor then hits this method to report whether
+        nodes were up at a given time.
+      operationId: batchCreateMixStatus
+      parameters:
+      - description: object
+        in: body
+        name: object
+        required: true
+        schema:
+          $ref: '#/definitions/models.BatchMixStatus'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: ""
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.Error'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/models.Error'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.Error'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.Error'
+      summary: Lets the network monitor create a new uptime status for multiple mixes
+      tags:
+      - status
 swagger: "2.0"
