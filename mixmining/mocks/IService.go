@@ -12,6 +12,22 @@ type IService struct {
 	mock.Mock
 }
 
+// BatchCreateGatewayStatus provides a mock function with given fields: batchGatewayStatus
+func (_m *IService) BatchCreateGatewayStatus(batchGatewayStatus models.BatchGatewayStatus) []models.PersistedGatewayStatus {
+	ret := _m.Called(batchGatewayStatus)
+
+	var r0 []models.PersistedGatewayStatus
+	if rf, ok := ret.Get(0).(func(models.BatchGatewayStatus) []models.PersistedGatewayStatus); ok {
+		r0 = rf(batchGatewayStatus)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.PersistedGatewayStatus)
+		}
+	}
+
+	return r0
+}
+
 // BatchCreateMixStatus provides a mock function with given fields: batchMixStatus
 func (_m *IService) BatchCreateMixStatus(batchMixStatus models.BatchMixStatus) []models.PersistedMixStatus {
 	ret := _m.Called(batchMixStatus)
@@ -23,6 +39,20 @@ func (_m *IService) BatchCreateMixStatus(batchMixStatus models.BatchMixStatus) [
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]models.PersistedMixStatus)
 		}
+	}
+
+	return r0
+}
+
+// BatchGetGatewayStatusReport provides a mock function with given fields:
+func (_m *IService) BatchGetGatewayStatusReport() models.BatchGatewayStatusReport {
+	ret := _m.Called()
+
+	var r0 models.BatchGatewayStatusReport
+	if rf, ok := ret.Get(0).(func() models.BatchGatewayStatusReport); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(models.BatchGatewayStatusReport)
 	}
 
 	return r0
@@ -42,6 +72,20 @@ func (_m *IService) BatchGetMixStatusReport() models.BatchMixStatusReport {
 	return r0
 }
 
+// CreateGatewayStatus provides a mock function with given fields: gatewayStatus
+func (_m *IService) CreateGatewayStatus(gatewayStatus models.GatewayStatus) models.PersistedGatewayStatus {
+	ret := _m.Called(gatewayStatus)
+
+	var r0 models.PersistedGatewayStatus
+	if rf, ok := ret.Get(0).(func(models.GatewayStatus) models.PersistedGatewayStatus); ok {
+		r0 = rf(gatewayStatus)
+	} else {
+		r0 = ret.Get(0).(models.PersistedGatewayStatus)
+	}
+
+	return r0
+}
+
 // CreateMixStatus provides a mock function with given fields: mixStatus
 func (_m *IService) CreateMixStatus(mixStatus models.MixStatus) models.PersistedMixStatus {
 	ret := _m.Called(mixStatus)
@@ -56,8 +100,22 @@ func (_m *IService) CreateMixStatus(mixStatus models.MixStatus) models.Persisted
 	return r0
 }
 
-// GetStatusReport provides a mock function with given fields: pubkey
-func (_m *IService) GetStatusReport(pubkey string) models.MixStatusReport {
+// GetGatewayStatusReport provides a mock function with given fields: pubkey
+func (_m *IService) GetGatewayStatusReport(pubkey string) models.GatewayStatusReport {
+	ret := _m.Called(pubkey)
+
+	var r0 models.GatewayStatusReport
+	if rf, ok := ret.Get(0).(func(string) models.GatewayStatusReport); ok {
+		r0 = rf(pubkey)
+	} else {
+		r0 = ret.Get(0).(models.GatewayStatusReport)
+	}
+
+	return r0
+}
+
+// GetMixStatusReport provides a mock function with given fields: pubkey
+func (_m *IService) GetMixStatusReport(pubkey string) models.MixStatusReport {
 	ret := _m.Called(pubkey)
 
 	var r0 models.MixStatusReport
@@ -65,6 +123,22 @@ func (_m *IService) GetStatusReport(pubkey string) models.MixStatusReport {
 		r0 = rf(pubkey)
 	} else {
 		r0 = ret.Get(0).(models.MixStatusReport)
+	}
+
+	return r0
+}
+
+// ListGatewayStatus provides a mock function with given fields: pubkey
+func (_m *IService) ListGatewayStatus(pubkey string) []models.PersistedGatewayStatus {
+	ret := _m.Called(pubkey)
+
+	var r0 []models.PersistedGatewayStatus
+	if rf, ok := ret.Get(0).(func(string) []models.PersistedGatewayStatus); ok {
+		r0 = rf(pubkey)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]models.PersistedGatewayStatus)
+		}
 	}
 
 	return r0
@@ -86,8 +160,22 @@ func (_m *IService) ListMixStatus(pubkey string) []models.PersistedMixStatus {
 	return r0
 }
 
-// SaveBatchStatusReport provides a mock function with given fields: status
-func (_m *IService) SaveBatchStatusReport(status []models.PersistedMixStatus) models.BatchMixStatusReport {
+// SaveBatchGatewayStatusReport provides a mock function with given fields: status
+func (_m *IService) SaveBatchGatewayStatusReport(status []models.PersistedGatewayStatus) models.BatchGatewayStatusReport {
+	ret := _m.Called(status)
+
+	var r0 models.BatchGatewayStatusReport
+	if rf, ok := ret.Get(0).(func([]models.PersistedGatewayStatus) models.BatchGatewayStatusReport); ok {
+		r0 = rf(status)
+	} else {
+		r0 = ret.Get(0).(models.BatchGatewayStatusReport)
+	}
+
+	return r0
+}
+
+// SaveBatchMixStatusReport provides a mock function with given fields: status
+func (_m *IService) SaveBatchMixStatusReport(status []models.PersistedMixStatus) models.BatchMixStatusReport {
 	ret := _m.Called(status)
 
 	var r0 models.BatchMixStatusReport
@@ -100,8 +188,22 @@ func (_m *IService) SaveBatchStatusReport(status []models.PersistedMixStatus) mo
 	return r0
 }
 
-// SaveStatusReport provides a mock function with given fields: status
-func (_m *IService) SaveStatusReport(status models.PersistedMixStatus) models.MixStatusReport {
+// SaveGatewayStatusReport provides a mock function with given fields: status
+func (_m *IService) SaveGatewayStatusReport(status models.PersistedGatewayStatus) models.GatewayStatusReport {
+	ret := _m.Called(status)
+
+	var r0 models.GatewayStatusReport
+	if rf, ok := ret.Get(0).(func(models.PersistedGatewayStatus) models.GatewayStatusReport); ok {
+		r0 = rf(status)
+	} else {
+		r0 = ret.Get(0).(models.GatewayStatusReport)
+	}
+
+	return r0
+}
+
+// SaveMixStatusReport provides a mock function with given fields: status
+func (_m *IService) SaveMixStatusReport(status models.PersistedMixStatus) models.MixStatusReport {
 	ret := _m.Called(status)
 
 	var r0 models.MixStatusReport

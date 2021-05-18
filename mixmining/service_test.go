@@ -198,7 +198,7 @@ var _ = Describe("mixmining.Service", func() {
 			It("should return 0", func() {
 				mockDb.On("ListMixStatusSince", "key1", "4", daysAgo(30)).Return(emptyList)
 
-				uptime := serv.CalculateUptime(persisted1.PubKey, persisted1.IPVersion, daysAgo(30))
+				uptime := serv.CalculateMixUptime(persisted1.PubKey, persisted1.IPVersion, daysAgo(30))
 				assert.Equal(GinkgoT(), -1, uptime)
 			})
 
@@ -207,7 +207,7 @@ var _ = Describe("mixmining.Service", func() {
 			It("should return 66", func() {
 				mockDb.On("ListMixStatusSince", "key1", "4", daysAgo(1)).Return(twoUpOneDown())
 
-				uptime := serv.CalculateUptime("key1", "4", daysAgo(1))
+				uptime := serv.CalculateMixUptime("key1", "4", daysAgo(1))
 				expected := 66 // percent
 				assert.Equal(GinkgoT(), expected, uptime)
 			})
@@ -223,7 +223,7 @@ var _ = Describe("mixmining.Service", func() {
 			})
 			Context("this one *must be* a downer, so calculate using it", func() {
 				BeforeEach(func() {
-					mockDb.On("LoadReport", downer.PubKey).Return(models.MixStatusReport{}) // TODO: Mockery isn't happy returning an untyped nil, so I've had to sub in a blank `models.MixStatusReport{}`. It will actually return a nil.
+					mockDb.On("LoadMixReport", downer.PubKey).Return(models.MixStatusReport{}) // TODO: Mockery isn't happy returning an untyped nil, so I've had to sub in a blank `models.MixStatusReport{}`. It will actually return a nil.
 					expectedSave := models.MixStatusReport{
 						PubKey:           downer.PubKey,
 						MostRecentIPV4:   false,
@@ -238,7 +238,7 @@ var _ = Describe("mixmining.Service", func() {
 					mockDb.On("SaveMixStatusReport", expectedSave)
 				})
 				It("should save the initial report, all statuses will be set to down. Node will also be moved to removed set", func() {
-					result := serv.SaveStatusReport(downer)
+					result := serv.SaveMixStatusReport(downer)
 					assert.Equal(GinkgoT(), 0, result.Last5MinutesIPV4)
 					assert.Equal(GinkgoT(), 0, result.LastHourIPV4)
 					assert.Equal(GinkgoT(), 0, result.LastDayIPV4)
@@ -258,7 +258,7 @@ var _ = Describe("mixmining.Service", func() {
 					oneDown := []models.PersistedMixStatus{downer}
 					mockDb.On("GetNMostRecentMixStatuses", upper.PubKey, upper.IPVersion, now()).Return(oneDown)
 					mockDb.On("GetNMostRecentMixStatuses", upper.PubKey, upper.IPVersion, now()).Return(oneDown)
-					mockDb.On("LoadReport", upper.PubKey).Return(models.MixStatusReport{}) // TODO: Mockery isn't happy returning an untyped nil, so I've had to sub in a blank `models.MixStatusReport{}`. It will actually return a nil.
+					mockDb.On("LoadMixReport", upper.PubKey).Return(models.MixStatusReport{}) // TODO: Mockery isn't happy returning an untyped nil, so I've had to sub in a blank `models.MixStatusReport{}`. It will actually return a nil.
 					expectedSave := models.MixStatusReport{
 						PubKey:           upper.PubKey,
 						MostRecentIPV4:   true,
@@ -273,7 +273,7 @@ var _ = Describe("mixmining.Service", func() {
 					mockDb.On("SaveMixStatusReport", expectedSave)
 				})
 				It("should save the initial report, all statuses will be set to up", func() {
-					result := serv.SaveStatusReport(upper)
+					result := serv.SaveMixStatusReport(upper)
 					assert.Equal(GinkgoT(), true, result.MostRecentIPV4)
 					assert.Equal(GinkgoT(), 100, result.Last5MinutesIPV4)
 					assert.Equal(GinkgoT(), 100, result.LastHourIPV4)
@@ -311,10 +311,10 @@ var _ = Describe("mixmining.Service", func() {
 					LastHourIPV6:     0,
 					LastDayIPV6:      0,
 				}
-				mockDb.On("LoadReport", downer.PubKey).Return(initialState)
+				mockDb.On("LoadMixReport", downer.PubKey).Return(initialState)
 				mockDb.On("SaveMixStatusReport", expectedAfterUpdate)
 
-				updatedStatus := serv.SaveStatusReport(downer)
+				updatedStatus := serv.SaveMixStatusReport(downer)
 				assert.Equal(GinkgoT(), expectedAfterUpdate, updatedStatus)
 
 				mockDb.AssertExpectations(GinkgoT())
@@ -348,9 +348,9 @@ var _ = Describe("mixmining.Service", func() {
 				mockDb.On("ListMixStatusSince", "key1", "6", minutesAgo(5)).Return([]models.PersistedMixStatus{persistedStatusDown("key1", "6")})
 				mockDb.On("ListMixStatusSince", "key1", "6", minutesAgo(60)).Return([]models.PersistedMixStatus{persistedStatusDown("key1", "6")})
 
-				mockDb.On("BatchLoadReports", []string{"key1", "key1"}).Return(models.BatchMixStatusReport{Report: make([]models.MixStatusReport, 0)})
+				mockDb.On("BatchLoadMixReports", []string{"key1", "key1"}).Return(models.BatchMixStatusReport{Report: make([]models.MixStatusReport, 0)})
 				mockDb.On("SaveBatchMixStatusReport", expected)
-				updatedStatus := serv.SaveBatchStatusReport(batchReport)
+				updatedStatus := serv.SaveBatchMixStatusReport(batchReport)
 				assert.Equal(GinkgoT(), 1, len(updatedStatus.Report))
 			})
 		})
@@ -360,9 +360,9 @@ var _ = Describe("mixmining.Service", func() {
 		Context("When no saved report exists for a pubkey", func() {
 			It("should return an empty report", func() {
 				blank := models.MixStatusReport{}
-				mockDb.On("LoadReport", "superkey").Return(blank)
+				mockDb.On("LoadMixReport", "superkey").Return(blank)
 
-				report := serv.GetStatusReport("superkey")
+				report := serv.GetMixStatusReport("superkey")
 				assert.Equal(GinkgoT(), blank, report)
 			})
 		})
@@ -379,9 +379,9 @@ var _ = Describe("mixmining.Service", func() {
 					LastHourIPV6:     100,
 					LastDayIPV6:      100,
 				}
-				mockDb.On("LoadReport", "superkey").Return(perfect)
+				mockDb.On("LoadMixReport", "superkey").Return(perfect)
 
-				report := serv.GetStatusReport("superkey")
+				report := serv.GetMixStatusReport("superkey")
 				assert.Equal(GinkgoT(), perfect, report)
 			})
 		})

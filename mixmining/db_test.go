@@ -145,7 +145,7 @@ var _ = Describe("The mixmining db", func() {
 					LastDayIPV6:      50,
 				}
 				db.SaveMixStatusReport(newReport)
-				saved := db.LoadReport(newReport.PubKey)
+				saved := db.LoadMixReport(newReport.PubKey)
 				assert.Equal(GinkgoT(), newReport, saved)
 			})
 		})
@@ -171,7 +171,7 @@ var _ = Describe("The mixmining db", func() {
 				db.orm.Model(&models.MixStatusReport{}).Where("pub_key = ?", "key").Count(&firstCount)
 				assert.Equal(GinkgoT(), int64(1), firstCount)
 
-				report := db.LoadReport("key")
+				report := db.LoadMixReport("key")
 				report.Last5MinutesIPV4 = 666
 
 				db.SaveMixStatusReport(report)
@@ -180,7 +180,7 @@ var _ = Describe("The mixmining db", func() {
 				db.orm.Model(&models.MixStatusReport{}).Where("pub_key = ?", "key").Count(&secondCount)
 				assert.Equal(GinkgoT(), int64(1), secondCount)
 
-				reloadedReport := db.LoadReport("key")
+				reloadedReport := db.LoadMixReport("key")
 				assert.Equal(GinkgoT(), 666, reloadedReport.Last5MinutesIPV4)
 			})
 		})
@@ -226,7 +226,7 @@ var _ = Describe("The mixmining db", func() {
 			db.AddMixStatus(status4Duplicate)
 
 			dayAgo := now.Add(time.Duration(-1) * time.Hour * 24).UnixNano()
-			active := db.GetActiveNodes(dayAgo)
+			active := db.GetActiveMixes(dayAgo)
 
 			assert.Equal(GinkgoT(), active, []string{"aaa", "bbb", "ccc"})
 		})
