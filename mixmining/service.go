@@ -59,7 +59,7 @@ func NewService(db IDb, isTest bool) *Service {
 		// same with 'last day' report updater (every 10min)
 		go lastDayReportsUpdater(service)
 		// and old statuses remover (every 1h)
-		go oldStatusesPurger(service)
+		go oldDataPurger(service)
 	}
 
 	return service
@@ -77,11 +77,28 @@ func lastDayReportsUpdater(service *Service) {
 
 }
 
-func oldStatusesPurger(service *Service) {
-	ticker := time.NewTicker(time.Hour * 1)
+func oldDataPurger(service *Service) {
+	ticker := time.NewTicker(time.Hour * 2)
 
 	for {
 		now := timemock.Now()
+		allNodesReport := service.db.BatchLoadAllMixReports()
+
+		// if the node didn't get ANY reports in last 24h it means it's stale
+		// and we don't need to hold its report data anymore
+		lastDay := now.Add(-time.Hour * 24).UnixNano()
+
+		var reportsToPurge []string
+		for _, report := range allNodesReport.Report {
+			// we should have an equal number of ipv4 and ipv6 statuses,
+			// so it's enough to query just for one type
+			v4Statuses := service.db.ListMixStatusSince(report.PubKey, "4", lastDay)
+			if len(v4Statuses) == 0 {
+				reportsToPurge = append(reportsToPurge, report.PubKey)
+			}
+		}
+		service.db.RemoveMixReports(reportsToPurge)
+
 		lastWeek := now.Add(-(time.Hour * 24 * 7)).UnixNano()
 		service.db.RemoveOldMixStatuses(lastWeek)
 		service.db.RemoveOldGatewayStatuses(lastWeek)
@@ -96,15 +113,7 @@ func (service *Service) updateLastDayMixReports() models.BatchMixStatusReport {
 	batchReport := service.db.BatchLoadMixReports(allActive)
 
 	for i := range batchReport.Report {
-		lastDayUptime := service.CalculateMixUptime(batchReport.Report[i].PubKey, "4", dayAgo)
-		if lastDayUptime == -1 {
-			// there were no reports to calculate uptime with
-			// but this should NEVER happen as we only loaded reports for the nodes that received status data
-			// in last 24h
-			continue
-		}
-
-		batchReport.Report[i].LastDayIPV4 = lastDayUptime
+		batchReport.Report[i].LastDayIPV4 = service.CalculateMixUptime(batchReport.Report[i].PubKey, "4", dayAgo)
 		batchReport.Report[i].LastDayIPV6 = service.CalculateMixUptime(batchReport.Report[i].PubKey, "6", dayAgo)
 	}
 
@@ -219,8 +228,7 @@ func (service *Service) CalculateMixUptime(pubkey string, ipVersion string, sinc
 	statuses := service.db.ListMixStatusSince(pubkey, ipVersion, since)
 	numStatuses := len(statuses)
 	if numStatuses == 0 {
-		// this can only happen to the goroutine calculating uptime for last 1000 reports
-		return -1
+		return 0
 	}
 	up := 0
 	for _, status := range statuses {
@@ -240,15 +248,7 @@ func (service *Service) updateLastDayGatewayReports() models.BatchGatewayStatusR
 	batchReport := service.db.BatchLoadGatewayReports(allActive)
 
 	for i := range batchReport.Report {
-		lastDayUptime := service.CalculateGatewayUptime(batchReport.Report[i].PubKey, "4", dayAgo)
-		if lastDayUptime == -1 {
-			// there were no reports to calculate uptime with
-			// but this should NEVER happen as we only loaded reports for the nodes that received status data
-			// in last 24h
-			continue
-		}
-
-		batchReport.Report[i].LastDayIPV4 = lastDayUptime
+		batchReport.Report[i].LastDayIPV4 = service.CalculateGatewayUptime(batchReport.Report[i].PubKey, "4", dayAgo)
 		batchReport.Report[i].LastDayIPV6 = service.CalculateGatewayUptime(batchReport.Report[i].PubKey, "6", dayAgo)
 	}
 
@@ -363,8 +363,7 @@ func (service *Service) CalculateGatewayUptime(pubkey string, ipVersion string, 
 	statuses := service.db.ListGatewayStatusSince(pubkey, ipVersion, since)
 	numStatuses := len(statuses)
 	if numStatuses == 0 {
-		// this can only happen to the goroutine calculating uptime for last 1000 reports
-		return -1
+		return 0
 	}
 	up := 0
 	for _, status := range statuses {

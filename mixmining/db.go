@@ -35,6 +35,8 @@ type IDb interface {
 	LoadMixReport(pubkey string) models.MixStatusReport
 	LoadNonStaleMixReports() models.BatchMixStatusReport
 	BatchLoadMixReports(pubkeys []string) models.BatchMixStatusReport
+	BatchLoadAllMixReports() models.BatchMixStatusReport
+	RemoveMixReports(pubkeys []string)
 	SaveMixStatusReport(models.MixStatusReport)
 	SaveBatchMixStatusReport(models.BatchMixStatusReport)
 
@@ -245,6 +247,24 @@ func (db *Db) BatchLoadMixReports(pubkeys []string) models.BatchMixStatusReport 
 		return models.BatchMixStatusReport{Report: make([]models.MixStatusReport, 0)}
 	}
 	return models.BatchMixStatusReport{Report: reports}
+}
+
+// BatchLoadAllMixReports retrieves a models.BatchMixStatusReport containing data of all nodes
+func (db *Db) BatchLoadAllMixReports() models.BatchMixStatusReport {
+	var reports []models.MixStatusReport
+
+	if retrieve := db.orm.Find(&reports); retrieve.Error != nil {
+		fmt.Printf("ERROR while retrieving all mix status report %+v", retrieve.Error)
+		return models.BatchMixStatusReport{Report: make([]models.MixStatusReport, 0)}
+	}
+	return models.BatchMixStatusReport{Report: reports}
+}
+
+// RemoveMixReports removes MixReports of nodes specified by the provided public keys.
+func (db *Db) RemoveMixReports(pubkeys []string) {
+	if err := db.orm.Unscoped().Where("pub_key IN ?", pubkeys).Delete(&models.MixStatusReport{}).Error; err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "failed to remove old reports from the database - %v\n", err)
+	}
 }
 
 func (db *Db) GetActiveMixes(since int64) []string {
